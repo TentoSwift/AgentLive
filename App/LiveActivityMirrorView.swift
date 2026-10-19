@@ -126,12 +126,11 @@ private struct LiveActivityMirrorBackground: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
-            content.glassEffect(.regular.tint(Color.codexBrand.opacity(0.28)),
+            content.glassEffect(.regular.tint(.clear),
                                 in: RoundedRectangle(cornerRadius: 20))
         } else {
             content
                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
-                .background(Color.codexBrand.opacity(0.28), in: RoundedRectangle(cornerRadius: 20))
         }
     }
 }

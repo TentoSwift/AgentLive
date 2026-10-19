@@ -465,9 +465,7 @@ private struct LockScreenView: View {
                 .activityBackgroundTint(.black)
         } else {
             fullBody
-                // システムのガラス素材を青紫に染める。背景を独自の不透明な
-                // View で覆わず、壁紙・アクセシビリティ設定への適応を保つ。
-                .activityBackgroundTint(Color.codexBrand.opacity(0.28))
+                .activityBackgroundTint(.clear)
         }
     }
 
