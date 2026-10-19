@@ -9,15 +9,17 @@ struct LiveActivityMirrorView: View {
     let attributes: ClaudeActivityAttributes
     let state: ClaudeActivityAttributes.ContentState
 
+    private var provider: SessionProvider { state.sessionProvider }
+
     private var status: ClaudeStatus { ClaudeStatus(state.status) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        ReplyPriorityLayout(maxHeight: 136, spacing: status == .done ? 4 : 6) {
             if !state.question.isEmpty {
                 QuestionView(sessionId: attributes.sessionId,
                              question: state.question,
                              options: state.options,
-                             tint: status.color,
+                             tint: status.color(for: provider),
                              compact: false,
                              isSettled: state.textSettled,
                               questionCount: state.questionCount)
@@ -25,10 +27,10 @@ struct LiveActivityMirrorView: View {
                 // ヘッダ: 状態アイコン（作業中はアニメーション）・状態ラベル・
                 // 実行中ツール・モデル名・経過時間
                 HStack(spacing: 6) {
-                    StatusIconView(status: status, size: 26)
+                    StatusIconView(status: status, provider: provider, size: 26)
                     Text(status.label)
                         .font(.headline)
-                        .foregroundStyle(status.needsAttention ? status.color : .primary)
+                        .foregroundStyle(status.needsAttention ? status.color(for: provider) : .primary)
                     if !state.currentTool.isEmpty {
                         Text(state.currentTool)
                             .font(.subheadline.monospaced())
@@ -42,7 +44,8 @@ struct LiveActivityMirrorView: View {
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
-                    ElapsedTimerText(startedAt: state.startedAt)
+                    ElapsedTimerText(startedAt: state.workStartedAt ?? state.startedAt,
+                                     endedAt: state.workEndedAt)
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -68,61 +71,67 @@ struct LiveActivityMirrorView: View {
                 if expandResponse {
                     if !state.lastPrompt.isEmpty {
                         HStack(alignment: .center, spacing: 6) {
-                            PromptIcon(size: 26, color: .secondary)
-                            MarqueeText(
-                                text: state.lastPrompt,
-                                font: .footnote, uiFontSize: 13, uiFontWeight: .regular,
-                                color: .secondary, lineHeight: 16,
-                                isSettled: state.textSettled)
+                            PromptIcon(size: status == .done ? 18 : 26, color: .secondary)
+                            ActivityMarqueeText(state.lastPrompt)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     HStack(alignment: .top, spacing: 6) {
-                        ReplyIcon(size: 26, color: Color.claudeBrand, status: status, changeTrigger: state.lastResponse)
-                        ResponseBodyView(text: state.lastResponse, lineLimit: 10)
+                        ReplyIcon(size: 26, color: provider.accentColor, status: status, changeTrigger: state.lastResponse, provider: provider)
+                        CompletedResponseView(text: state.lastResponse)
                             .foregroundStyle(.primary)
                     }
+                    .layoutValue(key: ResponseContentKey.self, value: true)
                 } else {
                     if !state.lastPrompt.isEmpty {
                         HStack(alignment: .center, spacing: 6) {
-                            PromptIcon(size: 26, color: .secondary)
-                            MarqueeText(
-                                text: state.lastPrompt,
-                                font: .footnote, uiFontSize: 13, uiFontWeight: .regular,
-                                color: .secondary, lineHeight: 16,
-                                isSettled: state.textSettled)
+                            PromptIcon(size: status == .done ? 18 : 26, color: .secondary)
+                            ActivityMarqueeText(state.lastPrompt)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     if !state.lastResponse.isEmpty {
                         if status == .done && state.lastResponse.count >= 16 {
-                            // 完了時、16文字以上の返答はマーキーにせず2行まで折り返す
+                            // 完了時は読める先頭を残し、はみ出した続きだけ2周流す
                             HStack(alignment: .top, spacing: 6) {
-                                ReplyIcon(size: 26, color: Color.claudeBrand, status: status, changeTrigger: state.lastResponse)
-                                ResponseBodyView(text: state.lastResponse, lineLimit: 2)
+                                ReplyIcon(size: 26, color: provider.accentColor, status: status, changeTrigger: state.lastResponse, provider: provider)
+                                CompletedResponseView(text: state.lastResponse)
                                     .foregroundStyle(.primary)
                             }
+                            .layoutValue(key: ResponseContentKey.self, value: true)
                         } else {
                             HStack(alignment: .center, spacing: 6) {
-                                ReplyIcon(size: 26, color: Color.claudeBrand, status: status, changeTrigger: state.lastResponse)
-                                MarqueeText(
-                                    text: state.lastResponse,
-                                    font: .footnote, uiFontSize: 13, uiFontWeight: .regular,
-                                    color: .primary, lineHeight: 16,
-                                    isSettled: state.textSettled)
+                                ReplyIcon(size: 26, color: provider.accentColor, status: status, changeTrigger: state.lastResponse, provider: provider)
+                                ActivityMarqueeText(state.lastResponse)
+                                    .foregroundStyle(.primary)
                             }
                         }
                     }
 
                     LogLinesView(logs: state.recentLogs, maxLines: 2)
 
-                    if state.toolCount > 0 {
-                        Text("ツール実行 \(state.toolCount) 回")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                    }
                 }
+            }
+            if state.question.isEmpty {
+                SessionUsageView(tokenCount: state.tokenCount,
+                                 weeklyUsedPercent: state.weeklyUsedPercent)
             }
         }
         .padding(12)
-        .background(Color.black.opacity(0.65), in: RoundedRectangle(cornerRadius: 20))
+        .modifier(LiveActivityMirrorBackground())
+    }
+}
+
+private struct LiveActivityMirrorBackground: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.glassEffect(.regular.tint(Color.codexBrand.opacity(0.28)),
+                                in: RoundedRectangle(cornerRadius: 20))
+        } else {
+            content
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+                .background(Color.codexBrand.opacity(0.28), in: RoundedRectangle(cornerRadius: 20))
+        }
     }
 }

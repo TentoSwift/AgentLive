@@ -43,6 +43,9 @@ launchctl kickstart -k "gui/$UID_NUM/com.tento.claudelive"
 echo "==> Claude Code hooks を設定"
 python3 "$DIR/install_hooks.py"
 
+echo "==> Codex hooks を設定"
+python3 "$DIR/install_codex_hooks.py"
+
 echo ""
 echo "セットアップ完了。残りの手順:"
 echo "  1. ~/.claudelive/config.json に APNs キー ID を設定"

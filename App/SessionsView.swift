@@ -128,6 +128,7 @@ private struct SessionRow: View {
     /// 直前のプロンプト（lastPrompt）の方が「今何をしているセッションか」を
     /// 表すので、そちらを優先する
     private var headline: String {
+        if session.provider == "codex", !session.title.isEmpty { return session.title }
         if !session.lastPrompt.isEmpty { return session.lastPrompt }
         if !session.title.isEmpty { return session.title }
         return session.name.isEmpty ? session.project : session.name
@@ -136,37 +137,40 @@ private struct SessionRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack {
-                Text(headline)
-                    .font(.headline)
+                SessionTitleText(headline)
                     .lineLimit(1)
                 Spacer()
                 let status = ClaudeStatus(session.status)
-                Label(session.status == "idle" ? "待機" : status.label,
-                      systemImage: session.status == "idle" ? "moon.zzz" : status.icon)
+                let provider = SessionProvider(session.provider)
+                Label {
+                    Text(session.status == "idle" ? "待機" : status.label)
+                } icon: {
+                    if provider == .codex, session.status != "idle" {
+                        StatusIconView(status: status, provider: provider, size: 14,
+                                       animateWhenWorking: false)
+                    } else {
+                        Image(systemName: session.status == "idle" ? "moon.zzz" : status.icon)
+                    }
+                }
                     .font(.caption)
-                    .foregroundStyle(session.status == "idle" ? Color.secondary : status.color)
+                    .foregroundStyle(session.status == "idle" ? Color.secondary : status.color(for: provider))
             }
             HStack(spacing: 6) {
                 Text(session.project)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 if !session.name.isEmpty {
-                    Text(session.name)
-                        .font(.caption2)
-                        .foregroundStyle(.tertiary)
-                }
-                if session.toolCount > 0 {
-                    Text("ツール \(session.toolCount) 回")
-                        .font(.caption2)
+                    SessionTitleText(session.name, size: 11)
                         .foregroundStyle(.tertiary)
                 }
             }
+            SessionUsageView(tokenCount: session.tokenCount,
+                             weeklyUsedPercent: session.weeklyUsedPercent)
             // 見出しが直前のプロンプトになったので、元々何を頼んだセッションかが
             // わかるよう最初の指示（title）を添える。質問中はボタン UI が主役なので出さない
             if !session.title.isEmpty, session.title != headline,
                session.status != "question" {
-                Text(session.title)
-                    .font(.caption)
+                SessionTitleText(session.title, size: 12)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -186,6 +190,7 @@ struct SessionDetailView: View {
     @State private var agents: [AppModel.AgentTask] = []
     @State private var answerInput = ""
     @State private var answering = false
+    @State private var answerFailed = false
     @State private var promptInput = ""
     @State private var sendingPrompt = false
     /// 複数質問・複数選択(multiSelect)のときの選択状態。質問のインデックス → 選んだ選択肢
@@ -198,6 +203,8 @@ struct SessionDetailView: View {
     private var session: AppModel.RemoteSession? {
         model.remoteSessions.first { $0.id == sessionId }
     }
+
+    private var accent: Color { SessionProvider(session?.provider).accentColor }
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -215,11 +222,11 @@ struct SessionDetailView: View {
                     }
                     // 操作モードがオフのときは、送っても届かない／届いてほしくない
                     // 入力欄と回答ボタンを出さない（設定画面でオンにできる）
-                    if controlMode {
+                    if controlMode && session?.provider != "codex" {
                         promptSection
-                        if let session, !session.question.isEmpty {
-                            questionSection(session)
-                        }
+                    }
+                    if controlMode, let session, !session.question.isEmpty {
+                        questionSection(session)
                     }
                     if !loaded {
                         ProgressView()
@@ -231,7 +238,7 @@ struct SessionDetailView: View {
                             .padding()
                     }
                     ForEach(messages) { message in
-                        MessageBubble(message: message)
+                            MessageBubble(message: message, accent: accent)
                             .id(message.id)
                     }
                 }
@@ -244,14 +251,20 @@ struct SessionDetailView: View {
                 }
             }
         }
-        .navigationTitle(session.map { s in
+        .sessionNavigationTitle(session.map { s in
             if !s.lastPrompt.isEmpty { return s.lastPrompt }
             return s.title.isEmpty ? (s.name.isEmpty ? s.project : s.name) : s.title
         } ?? "セッション")
         .navigationBarTitleDisplayMode(.inline)
+        .tint(accent)
+        .alert("回答を送信できませんでした", isPresented: $answerFailed) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Macとの接続を確認してください。質問の期限が切れている場合は、Macで回答してください。")
+        }
         .toolbar {
             // コマンド送信・モデル変更も操作モードのときだけ
-            if controlMode {
+            if controlMode && session?.provider != "codex" {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         ForEach(ClaudeQuickCommand.allCases) { command in
@@ -331,7 +344,7 @@ struct SessionDetailView: View {
                     ProgressView().controlSize(.small)
                 } else {
                     Image(systemName: "checkmark.circle")
-                        .foregroundStyle(Color.claudeBrand)
+                        .foregroundStyle(accent)
                 }
             }
             .frame(width: 18)
@@ -361,7 +374,7 @@ struct SessionDetailView: View {
     private func agentSubtitle(_ agent: AppModel.AgentTask) -> String {
         var parts: [String] = []
         if !agent.agentType.isEmpty { parts.append(agent.agentType) }
-        if !agent.model.isEmpty { parts.append(agent.model) }
+        if !agent.model.isEmpty { parts.append(shortModelName(agent.model)) }
         parts.append(relativeTimeText(epoch: agent.updatedAt))
         return parts.joined(separator: " · ")
     }
@@ -374,7 +387,7 @@ struct SessionDetailView: View {
         HStack(spacing: 8) {
             Image(systemName: session.taskDone == session.taskTotal
                   ? "checklist.checked" : "checklist")
-                .foregroundStyle(Color.claudeBrand)
+                .foregroundStyle(accent)
             Text("\(session.taskDone)/\(session.taskTotal)")
                 .font(.subheadline.monospacedDigit().bold())
             if !session.taskActive.isEmpty {
@@ -447,7 +460,7 @@ struct SessionDetailView: View {
                             } else {
                                 answering = true
                                 Task {
-                                    await model.answer(sessionId: sessionId, answer: option)
+                                    answerFailed = !(await model.answer(sessionId: sessionId, answer: option))
                                     answering = false
                                 }
                             }
@@ -464,7 +477,7 @@ struct SessionDetailView: View {
                         .buttonStyle(.borderedProminent)
                         .tint(accumulate && !isSelected
                               ? Color.gray.opacity(0.35)
-                              : Color.claudeBrand)
+                              : accent)
                     }
                     // 選択肢に無い答えを質問ごとに書けるようにする。
                     // Claude Code 本体は各質問に「その他」で自由記述できるので、
@@ -494,7 +507,7 @@ struct SessionDetailView: View {
                     let answers = composed
                     answering = true
                     Task {
-                        await model.answer(sessionId: sessionId, answers: answers)
+                        answerFailed = !(await model.answer(sessionId: sessionId, answers: answers))
                         answering = false
                         selections = [:]
                         customAnswers = [:]
@@ -506,7 +519,7 @@ struct SessionDetailView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
-                .tint(Color.claudeBrand)
+                .tint(accent)
                 .disabled(answering || !allAnswered)
             } else {
                 // 選択肢にない答えを自由入力できるようにする
@@ -519,7 +532,7 @@ struct SessionDetailView: View {
                             answerInput = ""
                             answering = true
                             Task {
-                                await model.answer(sessionId: sessionId, answer: text)
+                                answerFailed = !(await model.answer(sessionId: sessionId, answer: text))
                                 answering = false
                             }
                         } label: {
@@ -549,6 +562,7 @@ struct SessionDetailView: View {
 
 private struct MessageBubble: View {
     let message: AppModel.ChatMessage
+    var accent: Color = .claudeBrand
 
     var body: some View {
         HStack {
@@ -567,7 +581,7 @@ private struct MessageBubble: View {
             .padding(.vertical, 8)
             .background(
                 message.role == "user"
-                    ? Color.accentColor.opacity(0.85)
+                    ? accent.opacity(0.85)
                     : Color(.secondarySystemBackground),
                 in: RoundedRectangle(cornerRadius: 14))
             .textSelection(.enabled)
@@ -611,7 +625,7 @@ struct AgentTranscriptView: View {
                             .padding()
                     }
                     ForEach(messages) { message in
-                        MessageBubble(message: message)
+                        MessageBubble(message: message, accent: SessionProvider(model.remoteSessions.first { $0.id == sessionId }?.provider).accentColor)
                             .id(message.id)
                     }
                 }
@@ -624,7 +638,7 @@ struct AgentTranscriptView: View {
                 }
             }
         }
-        .navigationTitle(agent.displayTitle)
+        .sessionNavigationTitle(agent.displayTitle)
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await reload()
@@ -644,7 +658,7 @@ struct AgentTranscriptView: View {
                     ProgressView().controlSize(.small)
                 } else {
                     Image(systemName: "checkmark.circle")
-                        .foregroundStyle(Color.claudeBrand)
+                        .foregroundStyle(SessionProvider(model.remoteSessions.first { $0.id == sessionId }?.provider).accentColor)
                 }
                 Text(agent.displayTitle)
                     .font(.subheadline.bold())
@@ -662,7 +676,7 @@ struct AgentTranscriptView: View {
     private var subtitle: String {
         var parts: [String] = []
         if !agent.agentType.isEmpty { parts.append(agent.agentType) }
-        if !agent.model.isEmpty { parts.append(agent.model) }
+        if !agent.model.isEmpty { parts.append(shortModelName(agent.model)) }
         parts.append(agent.running ? "実行中" : "完了")
         let relative = relativeTimeText(epoch: agent.updatedAt)
         if !relative.isEmpty { parts.append(relative) }

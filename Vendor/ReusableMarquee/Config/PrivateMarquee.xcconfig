@@ -1,0 +1,20 @@
+// Include in BOTH the app and Widget extension target configurations.
+// Override this folder if ReusableMarquee is stored somewhere else.
+PRIVATE_MARQUEE_ROOT = $(SRCROOT)/Vendor/ReusableMarquee
+PRIVATE_MARQUEE_GENERATED_ROOT = $(PRIVATE_MARQUEE_ROOT)/Generated
+
+// Match --deployment-target to each target's IPHONEOS_DEPLOYMENT_TARGET.
+PRIVATE_MARQUEE_TARGET_SUFFIX =
+PRIVATE_MARQUEE_TARGET_SUFFIX[sdk=iphonesimulator*] = -simulator
+PRIVATE_MARQUEE_TARGET = arm64-apple-ios$(IPHONEOS_DEPLOYMENT_TARGET)$(PRIVATE_MARQUEE_TARGET_SUFFIX)
+PRIVATE_MARQUEE_MODULES = $(PRIVATE_MARQUEE_GENERATED_ROOT)/$(SDK_NAME)/$(PRIVATE_MARQUEE_TARGET)/Modules
+SWIFT_INCLUDE_PATHS[arch=arm64] = $(inherited) "$(PRIVATE_MARQUEE_MODULES)"
+SWIFT_ACTIVE_COMPILATION_CONDITIONS[arch=arm64] = $(inherited) PRIVATE_MARQUEE_ENABLED
+
+// Run Scripts/build-bridge.sh before building; generated files must match the
+// active Xcode, SDK, architecture, and deployment target. Regenerate after an
+// Xcode update even when SDK_NAME is unchanged. Only arm64 is supported here.
+// This does not add linker flags, embedded frameworks, or private entitlements.
+// Do not add Bridge/*.swift to app target membership and do not embed the probe.
+// Remove PRIVATE_MARQUEE_ENABLED to compile the component's static fallback with
+// the ordinary SDK. That is a build-time choice, not runtime symbol detection.

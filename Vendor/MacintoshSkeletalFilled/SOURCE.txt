@@ -1,0 +1,8 @@
+Upstream: https://github.com/npwitk/Macintosh-Skeletal-Filled
+Commit: 07192af3f086c0f6a616800f7d43d012656c213b
+Font: MacintoshSkeletalFilled.otf
+SHA-256: 299edec5092a978765763068f530f791053d52cc0edb78f65c7bff8f3aefdd71
+
+Personal, non-commercial, educational use only; see LICENSE.
+Included only by iOS app and Widget Debug builds. Release excludes the font and its notice.
+Used for StandBy session names. Unsupported characters use system font fallback.

@@ -20,7 +20,7 @@ struct ClaudeActivityAttributes: ActivityAttributes {
         var currentTool: String
         /// 直近のツール実行ログ（新しいものが先頭、最大 4 行）
         var recentLogs: [String]
-        /// セッション開始時刻（経過時間タイマー用）
+        /// セッション開始時刻（旧デーモンとの互換用）。
         var startedAt: Date
         /// 累計ツール実行数
         var toolCount: Int
@@ -66,6 +66,22 @@ struct ClaudeActivityAttributes: ActivityAttributes {
         /// 進行中タスクの activeForm（例 "〜を作成中"）。無ければ空文字か nil。
         /// 旧デーモン互換のため Optional
         var taskActive: String?
+        /// Optional for compatibility with existing activities and older daemons.
+        var provider: String? = nil
+        /// 今回の依頼の開始・終了時刻。終了後はタイマーを停止する。
+        var workStartedAt: Date? = nil
+        var workEndedAt: Date? = nil
+        /// 今回の作業のトークン数（キャッシュ入力を含む）。未取得は nil。
+        var tokenCount: Int? = nil
+        /// アカウント全体の週間使用率。今回の作業の割合とは別の値。
+        var weeklyUsedPercent: Double? = nil
+        var weeklyUsageUpdatedAt: Date? = nil
+
+        var sessionProvider: SessionProvider {
+            // Existing activities created before provider was transmitted can
+            // still identify their GPT model while awaiting a fresh push.
+            SessionProvider(provider ?? (model.hasPrefix("gpt-") ? "codex" : nil))
+        }
     }
 
     var sessionId: String

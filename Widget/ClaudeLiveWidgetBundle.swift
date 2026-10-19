@@ -9,6 +9,16 @@ struct ClaudeLiveWidgetBundle: WidgetBundle {
     }
 
     var body: some Widget {
+        sessionsWidget()
         ClaudeLiveActivityWidget()
+    }
+
+    private func sessionsWidget() -> some Widget {
+        let widget = if #available(iOS 26.0, *) {
+            WidgetBundleBuilder.buildLimitedAvailability(ClaudeLivePushSessionsWidget())
+        } else {
+            WidgetBundleBuilder.buildLimitedAvailability(ClaudeLiveSessionsWidget())
+        }
+        return WidgetBundleBuilder.buildOptional(widget)
     }
 }

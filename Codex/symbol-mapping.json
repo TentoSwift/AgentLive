@@ -1,0 +1,13 @@
+{
+  "CodexMark": "codex-openai.svg",
+  "CodexBadgeCheckmark": "codex-openai.badge.checkmark.svg",
+  "CodexBadgeQuestionmark": "codex-openai.badge.questionmark.svg",
+  "CodexBubbleReply": "codex-openai.bubble.left.fill.svg",
+  "CodexBubbleReplyDone": "codex-openai.bubble.left.fill.badge.checkmark.svg",
+  "CodexTaskRunning": "codex-openai.rectangle.stack.fill.svg",
+  "CodexBashCheckmark": "Tools/codex-openai.tool.bash.badge.checkmark.svg",
+  "CodexReadCheckmark": "Tools/codex-openai.tool.read.badge.checkmark.svg",
+  "CodexEditCheckmark": "Tools/codex-openai.tool.edit.badge.checkmark.svg",
+  "CodexGrepCheckmark": "Tools/codex-openai.tool.grep.badge.checkmark.svg",
+  "CodexWebFetchCheckmark": "Tools/codex-openai.tool.webfetch.badge.checkmark.svg"
+}

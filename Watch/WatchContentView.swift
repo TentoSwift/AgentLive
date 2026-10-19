@@ -25,16 +25,15 @@ struct WatchContentView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             // ランダムな内部名（例 "claud-9b"）より、会話の中身を表す
                             // 直前のプロンプト（無ければ最初の指示）を見出しにする
-                            Text(session.lastPrompt.isEmpty
+                            SessionTitleText(session.lastPrompt.isEmpty
                                  ? (session.title.isEmpty
                                     ? (session.name.isEmpty ? session.project : session.name)
                                     : session.title)
                                  : session.lastPrompt)
-                                .font(.headline)
                                 .lineLimit(1)
                             Text(statusLabel(session.status))
                                 .font(.caption2)
-                                .foregroundStyle(statusColor(session.status))
+                                .foregroundStyle(statusColor(session.status, provider: SessionProvider(session.provider)))
                         }
                     }
                 }
@@ -164,6 +163,8 @@ struct WatchSessionDetailView: View {
         selections[index] = set
     }
 
+    private var provider: SessionProvider { SessionProvider(session?.provider) }
+
     var body: some View {
         ScrollViewReader { proxy in
         ScrollView {
@@ -172,14 +173,22 @@ struct WatchSessionDetailView: View {
                     // 状態行 + モデル変更ボタン（watchOS には Menu が無いのでシートで選ぶ）。
                     // 作業中は Dynamic Island と同じ Claude マークのモーフィングアニメを添える
                     HStack(spacing: 4) {
-                        if session.status == "working" {
+                        if provider == .codex, ["working", "done", "question"].contains(session.status) {
+                            Image(session.status == "done" ? "CodexBadgeCheckmark"
+                                  : session.status == "question" ? "CodexBadgeQuestionmark" : "CodexMark")
+                                .renderingMode(.template)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 18, height: 18)
+                                .foregroundStyle(provider.accentColor)
+                        } else if session.status == "working" {
                             WatchSpinnerView(size: 18)
                         }
                         Text(statusLabel(session.status))
                             .font(.headline)
-                            .foregroundStyle(statusColor(session.status))
+                            .foregroundStyle(statusColor(session.status, provider: SessionProvider(session.provider)))
                         if !session.currentTool.isEmpty {
-                            watchToolRunningIcon(session.currentTool)
+                            watchToolRunningIcon(session.currentTool, provider: provider)
                                 .frame(width: 14, height: 14)
                                 .foregroundStyle(.secondary)
                             Text(session.currentTool)
@@ -215,7 +224,7 @@ struct WatchSessionDetailView: View {
                         HStack(spacing: 4) {
                             Image(systemName: session.taskDone == session.taskTotal
                                   ? "checklist.checked" : "checklist")
-                                .foregroundStyle(Color.claudeBrand)
+                                .foregroundStyle(provider.accentColor)
                             Text("\(session.taskDone)/\(session.taskTotal)")
                                 .font(.caption.monospacedDigit().bold())
                             if !session.taskActive.isEmpty {
@@ -242,12 +251,12 @@ struct WatchSessionDetailView: View {
                                     .font(.caption2.bold())
                                     .foregroundStyle(.secondary)
                             } else {
-                                Image("ClaudeBubbleReply")
+                                Image("\(provider.symbolPrefix)BubbleReply")
                                     .renderingMode(.template)
                                     .resizable()
                                     .scaledToFit()
                                     .frame(width: 14, height: 14)
-                                    .foregroundStyle(Color.claudeBrand)
+                                    .foregroundStyle(provider.accentColor)
                             }
                             // 素の Text だと表がパイプの羅列、見出しが "## " のまま
                             // 出てしまうので、iPhone 側と同じ Markdown 描画にする。
@@ -310,7 +319,7 @@ struct WatchSessionDetailView: View {
                                 .buttonStyle(.borderedProminent)
                                 .tint(accumulate && !isSelected
                                       ? Color.gray.opacity(0.35)
-                                      : Color.claudeBrand)
+                                      : provider.accentColor)
                             }
                             // 選択肢に無い答えを質問ごとに書けるようにする
                             if accumulate {
@@ -348,7 +357,7 @@ struct WatchSessionDetailView: View {
                                     .frame(maxWidth: .infinity)
                             }
                             .buttonStyle(.borderedProminent)
-                            .tint(Color.claudeBrand)
+                            .tint(provider.accentColor)
                             .disabled(answering || !allAnswered)
                         } else {
                             // 選択肢にない答えを自由入力できるようにする
@@ -379,7 +388,7 @@ struct WatchSessionDetailView: View {
                 Color.clear.frame(height: 1).id("bottom")
             }
         }
-        .navigationTitle(session.map { s in
+        .sessionNavigationTitle(session.map { s in
             if !s.lastPrompt.isEmpty { return s.lastPrompt }
             return s.title.isEmpty ? (s.name.isEmpty ? s.project : s.name) : s.title
         } ?? "セッション")
@@ -419,7 +428,7 @@ struct WatchSessionDetailView: View {
                         withAnimation { proxy.scrollTo("bottom", anchor: .bottom) }
                     } label: {
                         Image(systemName: "arrow.down")
-                            .foregroundStyle(Color.claudeBrand)
+                            .foregroundStyle(provider.accentColor)
                     }
                     // ボタンの背景（すりガラスのカプセル）を消して
                     // Claude カラーの矢印だけを見せる
@@ -437,7 +446,7 @@ struct WatchSessionDetailView: View {
                         guard !trimmed.isEmpty else { return }
                         Task { await model.sendPrompt(sessionId: sessionId, text: trimmed) }
                     }
-                    .tint(Color.claudeBrand)
+                    .tint(provider.accentColor)
                 }
             }
         }
@@ -581,12 +590,12 @@ func statusLabel(_ status: String) -> String {
     }
 }
 
-func statusColor(_ status: String) -> Color {
+func statusColor(_ status: String, provider: SessionProvider = .claude) -> Color {
     switch status {
-    case "working", "done": return Color.claudeBrand
+    case "working", "done": return provider.accentColor
     case "permission":      return .yellow
     case "waiting":         return .cyan
-    case "question":        return .indigo
+    case "question":        return provider == .codex ? provider.accentColor : .indigo
     case "error":           return .red
     case "compacting":      return .purple
     default:                return .secondary

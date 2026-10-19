@@ -32,6 +32,7 @@ final class AppModel: ObservableObject {
 
     struct RemoteSession: Identifiable {
         let id: String        // sessionId
+        var provider: String = "claude"
         var name: String
         var title: String
         var project: String
@@ -51,6 +52,8 @@ final class AppModel: ObservableObject {
         var taskTotal: Int = 0
         /// 進行中タスクの activeForm（例 "〜を作成中"）。無ければ空
         var taskActive: String = ""
+        var tokenCount: Int? = nil
+        var weeklyUsedPercent: Double? = nil
     }
 
     /// サブエージェント（Agent ツールで起動されるバックグラウンドタスク）1件分。
@@ -250,13 +253,18 @@ final class AppModel: ObservableObject {
     }
 
     func loadRemoteSessions() async {
+        SessionWidgetStore.syncConnection()
+        SessionWidgetStore.setDeviceName(UIDevice.current.name)
         guard let data = await fetchData(path: "/sessions"),
               let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
               let entries = object["sessions"] as? [[String: Any]] else { return }
+        SessionWidgetStore.syncConnection()
+        _ = SessionWidgetStore.save(entries)
         remoteSessions = entries.compactMap { entry in
             guard let sessionId = entry["sessionId"] as? String else { return nil }
             return RemoteSession(
                 id: sessionId,
+                provider: entry["provider"] as? String ?? "claude",
                 name: entry["name"] as? String ?? "",
                 title: entry["title"] as? String ?? "",
                 project: entry["project"] as? String ?? "",
@@ -276,23 +284,28 @@ final class AppModel: ObservableObject {
                 },
                 taskDone: entry["taskDone"] as? Int ?? 0,
                 taskTotal: entry["taskTotal"] as? Int ?? 0,
-                taskActive: entry["taskActive"] as? String ?? "")
+                taskActive: entry["taskActive"] as? String ?? "",
+                tokenCount: entry["tokenCount"] as? Int,
+                weeklyUsedPercent: entry["weeklyUsedPercent"] as? Double)
         }
     }
 
     /// AskUserQuestion への回答（単一質問・単一選択のときの簡易版。
     /// 選択肢ボタン・自由入力のどちらからも使う）
-    func answer(sessionId: String, answer: String) async {
+    @discardableResult
+    func answer(sessionId: String, answer: String) async -> Bool {
         await self.answer(sessionId: sessionId, answers: [[answer]])
     }
 
     /// 質問ごとの選択結果をまとめて回答する（複数質問・複数選択(multiSelect)対応）。
     /// answers は questions と同じ並びで、multiSelect の質問は複数要素になる
-    func answer(sessionId: String, answers: [[String]]) async {
+    @discardableResult
+    func answer(sessionId: String, answers: [[String]]) async -> Bool {
         let payload: [String: Any] = ["sessionId": sessionId, "answers": answers]
-        guard let body = try? JSONSerialization.data(withJSONObject: payload) else { return }
-        _ = await relayRequest(path: "/answer", method: "POST", bodyData: body)
+        guard let body = try? JSONSerialization.data(withJSONObject: payload) else { return false }
+        let result = await relayRequest(path: "/answer", method: "POST", bodyData: body)
         await loadRemoteSessions()
+        return result != nil
     }
 
     func fetchMessages(sessionId: String) async -> [ChatMessage]? {
@@ -465,7 +478,13 @@ final class AppModel: ObservableObject {
                 textSettled: false,
                 model: "",
                 compactAnimated: compactAnimated,
-                lastTool: "")
+                lastTool: "",
+                provider: entry["provider"] as? String,
+                workStartedAt: (entry["workStartedAt"] as? Double).map { Date(timeIntervalSince1970: $0) },
+                workEndedAt: (entry["workEndedAt"] as? Double).map { Date(timeIntervalSince1970: $0) },
+                tokenCount: entry["tokenCount"] as? Int,
+                weeklyUsedPercent: entry["weeklyUsedPercent"] as? Double,
+                weeklyUsageUpdatedAt: (entry["weeklyUsageUpdatedAt"] as? Double).map { Date(timeIntervalSinceReferenceDate: $0) })
             // pushType .token なのでトークンが発行され、track → /register 経由で
             // Mac に渡り、以後の update はプッシュで届く
             if let activity = try? Activity.request(
@@ -584,7 +603,10 @@ final class AppModel: ObservableObject {
 
     @discardableResult
     private func performRegistration() async -> Bool {
+        SessionWidgetStore.syncConnection()
+        SessionWidgetStore.setDeviceName(UIDevice.current.name)
         var payload: [String: Any] = ["device": UIDevice.current.name]
+        if let token = SessionWidgetStore.pushToken { payload["widgetPushToken"] = token }
         payload["compactAnimated"] = compactAnimated
         if let token = pushToStartToken { payload["pushToStartToken"] = token }
         // 質問プッシュ通知（返信アクション付き）用のリモート通知トークン

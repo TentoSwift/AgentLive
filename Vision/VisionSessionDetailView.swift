@@ -49,7 +49,7 @@ struct VisionSessionDetailView: View {
             }
             .onDisappear { model.endPolling() }
         }
-        .navigationTitle(session.map { s in
+        .sessionNavigationTitle(session.map { s in
             s.lastPrompt.isEmpty
                 ? (s.title.isEmpty ? s.project : s.title)
                 : s.lastPrompt

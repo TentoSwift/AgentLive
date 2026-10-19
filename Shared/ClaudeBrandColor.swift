@@ -11,4 +11,18 @@ import SwiftUI
 extension Color {
     /// Claude のブランドカラー（クレイ系オレンジ）
     static let claudeBrand = Color(red: 0.85, green: 0.47, blue: 0.34)
+    /// Codex sessions use a blue-violet accent (#7C83FF).
+    static let codexBrand = Color(red: 124 / 255.0, green: 131 / 255.0, blue: 1)
+}
+
+enum SessionProvider: String, Codable {
+    case claude
+    case codex
+
+    init(_ value: String?) {
+        self = value == "codex" ? .codex : .claude
+    }
+
+    var accentColor: Color { self == .codex ? .codexBrand : .claudeBrand }
+    var symbolPrefix: String { self == .codex ? "Codex" : "Claude" }
 }

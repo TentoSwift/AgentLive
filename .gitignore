@@ -5,6 +5,7 @@ DerivedData/
 xcuserdata/
 *.xcworkspace/xcshareddata/swiftpm/Package.resolved
 .swiftpm/
+Vendor/ReusableMarquee/Generated/
 
 # Mac デーモンのビルド成果物・秘密情報（リポジトリに含めない）
 mac/claudelive-daemon

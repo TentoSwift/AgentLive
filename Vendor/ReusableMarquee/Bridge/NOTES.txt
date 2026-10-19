@@ -1,0 +1,31 @@
+The declarations in AppearanceAnimation.declarations.swift are recovered runtime
+declarations, not a reimplementation. They belong inside the SwiftUICore module,
+whose ABI name is SwiftUI. Compiling them as ordinary app Swift source would create
+different symbols and is not supported.
+
+Scripts/build-bridge.sh copies the selected local Apple SDK's public interface,
+appends only AppearanceAnimationStrategy and appearanceAnimation, and compiles the
+result with that Xcode toolchain. No system or SDK files are modified. The script
+checks the SDK linker stub and links a probe against the actual system symbols.
+It does not install, launch, or embed the probe in an app.
+
+Do not distribute Generated/: it contains local Apple SDK interface copies and
+compiler-specific artifacts. Rebuild it with the recipient's Xcode instead.
+
+Generated output separates SDK_NAME and full target triple:
+  Generated/iphonesimulator27.0/arm64-apple-ios26.0-simulator/Modules
+  Generated/iphoneos27.0/arm64-apple-ios26.0/Modules
+manifest.json records the original SDK interface hash, declarations hash, compiler,
+and link result. Regenerate after changing Xcode or SDK, or changing the target's
+deployment version. Each target needs the include path for its selected SDK and
+deployment target; matching app and extension settings use the same generated path.
+
+Runtime availability is separate from compilation. iOS 27.2 arm64 Simulator is the
+only runtime tested in this investigation. A deployment target of 26.0 does not prove
+these private functions exist or behave the same on iOS 26. Device compilation and
+linkage, if performed, still do not establish successful execution on an iPhone.
+
+No additional private framework, linker option, entitlement, or code-signing
+exception is required by the tested Simulator implementation. Availability checks
+for public iOS versions cannot establish private symbol existence on unknown OS
+versions; use a compatible, explicitly validated runtime for this build.

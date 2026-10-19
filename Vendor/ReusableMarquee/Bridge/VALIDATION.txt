@@ -1,0 +1,33 @@
+Bridge validation — 2026-10-19
+
+Scripts/build-bridge.sh was run from a clean generated module layout with:
+  --developer-dir /Applications/Xcode.app/Contents/Developer
+  --sdk iphonesimulator --deployment-target 26.0
+and separately:
+  --developer-dir /Applications/Xcode.app/Contents/Developer
+  --sdk iphoneos --deployment-target 26.0
+
+Both generated SwiftUICore modules compiled and the real-system link probes passed.
+Xcode/SDK: 27.0. Compiler: Apple Swift 6.4.
+The script pins DEVELOPER_DIR and SDKROOT for child compiler/linker commands, so
+an unrelated active xcode-select configuration does not choose a different linker SDK.
+
+Mach-O LC_BUILD_VERSION of the probes:
+- arm64-apple-ios26.0-simulator: platform 7 (IOSSIMULATOR), minos 26.0, sdk 27.0
+- arm64-apple-ios26.0:           platform 2 (IOS),          minos 26.0, sdk 27.0
+
+nm -u confirmed imports of:
+  _$s7SwiftUI27AppearanceAnimationStrategyO04withD0yA2CmFWC
+  _$s7SwiftUI27AppearanceAnimationStrategyOMa
+  _$s7SwiftUI4ViewPAAE19appearanceAnimation9animation8strategy8modifierQrAA0E0V_AA010AppearanceE8StrategyOqd__x_SbtXEtAaBRd__lF
+  _$s7SwiftUI4ViewPAAE19appearanceAnimation9animation8strategy8modifierQrAA0E0V_AA010AppearanceE8StrategyOqd__x_SbtXEtAaBRd__lFQOMQ
+otool -L identified the actual system SwiftUI framework dependency.
+
+Device SDK public declarations were sourced from Apple's arm64e textual interface
+and compiled for arm64, because this SDK does not ship a separate arm64 interface.
+Device success here means compilation and linkage only. No iPhone execution was done.
+The runtime behavior demonstrated by the containing investigation is iOS 27.2 arm64
+Simulator, across app, Home Widget, Live Activity Lock Screen and expanded Dynamic Island.
+
+Generated manifests record local source hashes, compiler, SDK, target, and include
+paths. Those generated artifacts are intentionally excluded from redistribution.

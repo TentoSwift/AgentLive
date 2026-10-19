@@ -19,9 +19,9 @@ func watchToolSymbolName(_ tool: String) -> String {
 /// 実行中ツールのアイコン。Task/Agent（サブエージェント）は Widget と同じ
 /// カスタムシンボル（Assets.xcassets の ClaudeTaskRunning）を使う
 @ViewBuilder
-func watchToolRunningIcon(_ tool: String) -> some View {
+func watchToolRunningIcon(_ tool: String, provider: SessionProvider = .claude) -> some View {
     if tool == "Task" || tool == "Agent" {
-        Image("ClaudeTaskRunning")
+        Image("\(provider.symbolPrefix)TaskRunning")
             .renderingMode(.template)
             .resizable()
             .scaledToFit()

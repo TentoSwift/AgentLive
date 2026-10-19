@@ -1,0 +1,74 @@
+ReusableMarquee — 最終コンポーネント検証記録
+検証日: 2026-10-19
+
+対象
+Sources/MarqueeText.swift。appearanceAnimation直後へ入力依存の.idを追加した最終版。
+文字列・フォント・幅・速度・間隔などの変更時に、反復アニメーションを作り直す。
+Source SHA-256: f9ca051838031e2ced482553c7bd09ae2ba76ce0555709d725c952dd0db99605
+
+環境
+- Xcode 27.0 / SDK 27.0 / Apple Swift 6.4
+- iPhone 17 Pro Simulator / iOS 27.2 (24B5084k) / arm64
+- 専用シミュレータ: 61CDF94D-47A5-4829-987A-820E82161380
+- deployment target: 26.0。iOS 26での実行確認はしていない。
+
+コンパイル・リンク
+- View本体とWidget/Live ActivityサンプルをSwift 6 strict concurrencyで検証。
+- 最小ブリッジON (Simulator): 成功、警告なし。
+- 公開SDKのみ／ブリッジOFF (Simulator): 成功、警告なし。
+- 最小ブリッジON (iphoneos): 成功、警告なし。実機での実行は未検証。
+- nmでappearanceAnimation系のimportはONが4件、OFFが0件。
+- 同期文字計測と入力正規化のロジック: シミュレータ上27/27チェック成功。
+詳細: compile-validation.txt, metrics-runtime.txt, ../Bridge/VALIDATION.txt
+
+タイトル更新とループ
+最初の実装ではタイトル変更後の録画に大きな文字飛びが見つかった。
+原因を旧反復状態の保持と推測し、アニメーション部分へ入力依存の.idを追加した。
+変更後のタイトルを60秒録画して1秒ごとに比較した結果、60/60区間で左移動。
+-118〜-122px/秒 (@3xで約40pt/秒)、周期22.825秒の約2.63周期を観測した。
+この録画内では旧版の文字飛びは再現しなかった。
+詳細: gallery-updated/video-validation.txt
+
+通常アプリの表示と停止条件
+- 日本語、合成絵文字を含む長いテキストが移動。
+- 短文、無効化、speed=0、speed=NaN、空文字は静止。
+- 実際のOS設定「視差効果を減らす」をONにして専用行の停止を確認。
+  同時にrespectsReduceMotion=falseの行は20秒継続して左へ移動。
+  検証後、OS設定は元のOFFへ戻し、UI上の値0を確認した。
+- accessibility treeでは内部2コピーが1つの全文テキストとして表示される。
+  VoiceOverによる音声読み上げ操作までは検証していない。
+- gallery/frame-00s.pngは起動時の白画面のため除外し、5秒以降を評価した。
+
+Live Activity
+ロック画面20秒、同一Activityのタイトル更新後30秒、拡大Dynamic Islandの
+時間差native screenshotを記録した。
+更新前後のRunは9AA8B8BE、開始時刻13:33:45で同じ。
+Activity.updateはタイトルの変更時だけ実行し、アニメーション各フレームの更新はない。
+文字領域の平行移動照合は、ロック画面4/4区間、更新後6/6区間、島3/3区間で左移動。
+Runラベルは各系列の全画像で完全一致。更新後動画の1〜30秒も29/29区間で左移動を確認。
+Dynamic Islandのオーバーレイはsimctl画像に含まれないため、Simulatorウィンドウの
+native screenshotを使った。採取時刻は各captures.jsonに保存した。
+
+ホーム画面Widget
+中央のONE-WAY MARQUEEが最終MarqueeText。20秒の4/4区間で左へ移動し、
+文字領域の差分は20.16〜23.09%。Timelineラベル13:35:31と下段の静止CONTROLは
+全画像で完全一致した。録画中のTimeline更新やアプリからの連続更新は行っていない。
+上段REPEATING OFFSETは比較用であり、配布コンポーネントの実装ではない。
+
+証拠の扱い
+- pixel-validation.txt/json: 最終版の各表示面の画像比較。
+- gallery-updated/video-validation.txt/json: 更新後60秒の全1秒区間比較。
+- gallery-reduce-motion/video-validation.txt/json: 復帰後20秒の全1秒区間比較。
+- live-updated/video-validation.txt/json: 同一Activityの更新後1〜30秒の比較。
+- pre-identity/: 修正前の調査用記録。最終版の合格証拠に含めない。
+- stale-build-ignore/: 古いバイナリの記録。検証対象から除外。
+- 動画・画像・生成SDK interfaceは配布ZIPへ含めない。ローカルのVerificationに保存。
+
+統合ハーネス
+../RuntimeProbeのoneWay表示が、このSources/MarqueeText.swiftを直接使用する。
+既存ハーネスはrepeatingOffset等との比較宣言も持つが、配布コンポーネントとサンプルの
+コンパイル・リンクは別途、新しい最小ブリッジだけで確認した。
+
+範囲
+これは上記シミュレータ上で記録した期間の検証結果。非公開APIの導入OS、他のOS版、
+実機での実行、無期限の継続動作を保証するものではない。

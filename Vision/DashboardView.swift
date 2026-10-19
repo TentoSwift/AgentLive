@@ -77,8 +77,7 @@ private struct SessionRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(headline)
-                    .font(.headline)
+                SessionTitleText(headline)
                     .lineLimit(1)
                 Spacer()
                 let status = ClaudeStatus(session.status)

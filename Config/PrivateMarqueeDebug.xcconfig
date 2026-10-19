@@ -1,0 +1,3 @@
+// Only the iOS app and Widget Debug configurations include this file.
+// Release builds use ReusableMarquee's public-SDK static fallback.
+#include "../Vendor/ReusableMarquee/Config/PrivateMarquee.xcconfig"

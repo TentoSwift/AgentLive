@@ -7,6 +7,19 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		CB0000000000000000000AE0 /* SessionTitleFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA0000000000000000000AE0 /* SessionTitleFont.swift */; };
+		CB0000000000000000000AE1 /* SessionTitleFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA0000000000000000000AE0 /* SessionTitleFont.swift */; };
+		CB0000000000000000000AE2 /* SessionTitleFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA0000000000000000000AE0 /* SessionTitleFont.swift */; };
+		CB0000000000000000000AE3 /* SessionTitleFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA0000000000000000000AE0 /* SessionTitleFont.swift */; };
+		CB0000000000000000000AF0 /* MacintoshSkeletalFilled.otf in Resources */ = {isa = PBXBuildFile; fileRef = CA0000000000000000000AD0 /* MacintoshSkeletalFilled.otf */; };
+		CB0000000000000000000AF1 /* MacintoshSkeletalFilled-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = CA0000000000000000000AD1 /* MacintoshSkeletalFilled-LICENSE.txt */; };
+		CB0000000000000000000AF2 /* MacintoshSkeletalFilled.otf in Resources */ = {isa = PBXBuildFile; fileRef = CA0000000000000000000AD0 /* MacintoshSkeletalFilled.otf */; };
+		CB0000000000000000000AF3 /* MacintoshSkeletalFilled-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = CA0000000000000000000AD1 /* MacintoshSkeletalFilled-LICENSE.txt */; };
+
+		CB0000000000000000000AD0 /* MacintoshSkeletalFilled.otf in Resources */ = {isa = PBXBuildFile; fileRef = CA0000000000000000000AD0 /* MacintoshSkeletalFilled.otf */; };
+		CB0000000000000000000AD1 /* MacintoshSkeletalFilled.otf in Resources */ = {isa = PBXBuildFile; fileRef = CA0000000000000000000AD0 /* MacintoshSkeletalFilled.otf */; };
+		CB0000000000000000000AD2 /* MacintoshSkeletalFilled-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = CA0000000000000000000AD1 /* MacintoshSkeletalFilled-LICENSE.txt */; };
+		CB0000000000000000000AD3 /* MacintoshSkeletalFilled-LICENSE.txt in Resources */ = {isa = PBXBuildFile; fileRef = CA0000000000000000000AD1 /* MacintoshSkeletalFilled-LICENSE.txt */; };
 		CB00000000000000000000A1 /* ClaudeLiveApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA00000000000000000000A1 /* ClaudeLiveApp.swift */; };
 		CB00000000000000000000A2 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA00000000000000000000A2 /* ContentView.swift */; };
 		CB00000000000000000000A3 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA00000000000000000000A3 /* AppModel.swift */; };
@@ -132,6 +145,11 @@
 		CB000000000000000007B5 /* ClaudeBrandColor.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA00000000000000000BE0 /* ClaudeBrandColor.swift */; };
 		CB000000000000000007B6 /* ClaudeStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA00000000000000000BF0 /* ClaudeStatus.swift */; };
 		CB000000000000000007C1 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = CA00000000000000000000C9 /* Assets.xcassets */; };
+		CB0000000000000000000AB0 /* SessionWidgetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA0000000000000000000AA0 /* SessionWidgetStore.swift */; };
+		CB0000000000000000000AB1 /* SessionWidgetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA0000000000000000000AA0 /* SessionWidgetStore.swift */; };
+		CB0000000000000000000AB2 /* ClaudeLiveSessionsWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA0000000000000000000AA1 /* ClaudeLiveSessionsWidget.swift */; };
+		CB0000000000000000000AC0 /* ActivityMarqueeText.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA0000000000000000000AC0 /* ActivityMarqueeText.swift */; };
+		CB0000000000000000000AC1 /* ActivityMarqueeText.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA0000000000000000000AC0 /* ActivityMarqueeText.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -177,6 +195,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		CA0000000000000000000AE0 /* SessionTitleFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionTitleFont.swift; sourceTree = "<group>"; };
+		CA0000000000000000000AD0 /* MacintoshSkeletalFilled.otf */ = {isa = PBXFileReference; lastKnownFileType = file; name = MacintoshSkeletalFilled.otf; path = Vendor/MacintoshSkeletalFilled/MacintoshSkeletalFilled.otf; sourceTree = SOURCE_ROOT; };
+		CA0000000000000000000AD1 /* MacintoshSkeletalFilled-LICENSE.txt */ = {isa = PBXFileReference; lastKnownFileType = text; name = MacintoshSkeletalFilled-LICENSE.txt; path = Vendor/MacintoshSkeletalFilled/MacintoshSkeletalFilled-LICENSE.txt; sourceTree = SOURCE_ROOT; };
 		CA00000000000000000000A1 /* ClaudeLiveApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeLiveApp.swift; sourceTree = "<group>"; };
 		CA00000000000000000000A2 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		CA00000000000000000000A3 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
@@ -197,7 +218,7 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 		CA00000000000000000000B0 /* ClaudeLiveWidget.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = ClaudeLiveWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		CA00000000000000000000B1 /* FrameAnimation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameAnimation.swift; sourceTree = "<group>"; };
 		CA00000000000000000000B2 /* FillRect-Regular.otf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "FillRect-Regular.otf"; sourceTree = "<group>"; };
-		CA00000000000000000000B3 /* MarqueeText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarqueeText.swift; sourceTree = "<group>"; };
+		CA00000000000000000000B3 /* MarqueeText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sources/MarqueeText.swift; sourceTree = "<group>"; };
 		CA00000000000000000000C0 /* spinner-frame1.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "spinner-frame1.png"; sourceTree = "<group>"; };
 		CA00000000000000000000C1 /* spinner-frame2.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "spinner-frame2.png"; sourceTree = "<group>"; };
 		CA00000000000000000000C2 /* spinner-frame3.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "spinner-frame3.png"; sourceTree = "<group>"; };
@@ -244,6 +265,10 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 		CA000000000000000007A5 /* TileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TileView.swift; sourceTree = "<group>"; };
 		CA000000000000000007A6 /* CharacterPoseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CharacterPoseView.swift; sourceTree = "<group>"; };
 		CA000000000000000007A7 /* VisionSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionSettingsView.swift; sourceTree = "<group>"; };
+		CA0000000000000000000AA0 /* SessionWidgetStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionWidgetStore.swift; sourceTree = "<group>"; };
+		CA0000000000000000000AA1 /* ClaudeLiveSessionsWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeLiveSessionsWidget.swift; sourceTree = "<group>"; };
+		CA0000000000000000000AB0 /* PrivateMarqueeDebug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Config/PrivateMarqueeDebug.xcconfig; sourceTree = SOURCE_ROOT; };
+		CA0000000000000000000AC0 /* ActivityMarqueeText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityMarqueeText.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -268,9 +293,11 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 		CC00000000000000000000A2 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				CA0000000000000000000AA0 /* SessionWidgetStore.swift */,
 				CA00000000000000000000A4 /* ClaudeActivityAttributes.swift */,
 				CA00000000000000000BD0 /* MarkdownTable.swift */,
 				CA00000000000000000BE0 /* ClaudeBrandColor.swift */,
+				CA0000000000000000000AE0 /* SessionTitleFont.swift */,
 				CA00000000000000000BF0 /* ClaudeStatus.swift */,
 				CA00000000000000000000AB /* MarkdownText.swift */,
 				CA00000000000000000000AC /* AnswerIntent.swift */,
@@ -288,6 +315,7 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 		CC00000000000000000000A3 /* Widget */ = {
 			isa = PBXGroup;
 			children = (
+				CA0000000000000000000AA1 /* ClaudeLiveSessionsWidget.swift */,
 				CA00000000000000000000A8 /* Info.plist */,
 				CA00000000000000000000A5 /* ClaudeLiveWidgetBundle.swift */,
 				CA00000000000000000000A6 /* ClaudeLiveActivityWidget.swift */,
@@ -316,6 +344,7 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 				CC000000000000000007A0 /* Vision */,
 				CC00000000000000000000A2 /* Shared */,
 				CC00000000000000000000A3 /* Widget */,
+				CC0000000000000000000AB0 /* ReusableMarquee */,
 				CC00000000000000000000A4 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -323,9 +352,11 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 		CC00000000000000000000B0 /* Animation */ = {
 			isa = PBXGroup;
 			children = (
+				CA0000000000000000000AC0 /* ActivityMarqueeText.swift */,
 				CA00000000000000000000B1 /* FrameAnimation.swift */,
-				CA00000000000000000000B3 /* MarqueeText.swift */,
 				CA00000000000000000000B2 /* FillRect-Regular.otf */,
+				CA0000000000000000000AD0 /* MacintoshSkeletalFilled.otf */,
+				CA0000000000000000000AD1 /* MacintoshSkeletalFilled-LICENSE.txt */,
 				CA00000000000000000000F0 /* ClaudeFrames-Regular.ttf */,
 				CA0000000000000000000400 /* ClaudeLoop00-Regular.ttf */,
 				CA0000000000000000000401 /* ClaudeLoop01-Regular.ttf */,
@@ -373,6 +404,15 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 				CA000000000000000007A7 /* VisionSettingsView.swift */,
 			);
 			path = Vision;
+			sourceTree = "<group>";
+		};
+		CC0000000000000000000AB0 /* ReusableMarquee */ = {
+			isa = PBXGroup;
+			children = (
+				CA00000000000000000000B3 /* MarqueeText.swift */,
+				CA0000000000000000000AB0 /* PrivateMarqueeDebug.xcconfig */,
+			);
+			path = Vendor/ReusableMarquee;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -498,6 +538,8 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CB0000000000000000000AD0 /* MacintoshSkeletalFilled.otf in Resources */,
+				CB0000000000000000000AD2 /* MacintoshSkeletalFilled-LICENSE.txt in Resources */,
 				CB00000000000000000000E3 /* FillRect-Regular.otf in Resources */,
 				CB00000000000000000000F1 /* ClaudeFrames-Regular.ttf in Resources */,
 				CB0000000000000000000500 /* ClaudeLoop00-Regular.ttf in Resources */,
@@ -525,6 +567,8 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CB0000000000000000000AD1 /* MacintoshSkeletalFilled.otf in Resources */,
+				CB0000000000000000000AD3 /* MacintoshSkeletalFilled-LICENSE.txt in Resources */,
 				CB00000000000000000000B2 /* FillRect-Regular.otf in Resources */,
 				CB00000000000000000000F0 /* ClaudeFrames-Regular.ttf in Resources */,
 				CB0000000000000000000400 /* ClaudeLoop00-Regular.ttf in Resources */,
@@ -552,6 +596,8 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CB0000000000000000000AF0 /* MacintoshSkeletalFilled.otf in Resources */,
+				CB0000000000000000000AF1 /* MacintoshSkeletalFilled-LICENSE.txt in Resources */,
 				CB000000000000000006A7 /* spinner-frame1.png in Resources */,
 				CB000000000000000006A8 /* spinner-frame2.png in Resources */,
 				CB000000000000000006A9 /* spinner-frame3.png in Resources */,
@@ -568,6 +614,8 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CB0000000000000000000AF2 /* MacintoshSkeletalFilled.otf in Resources */,
+				CB0000000000000000000AF3 /* MacintoshSkeletalFilled-LICENSE.txt in Resources */,
 				CB000000000000000007C1 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -579,8 +627,10 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CB0000000000000000000AB0 /* SessionWidgetStore.swift in Sources */,
 				CB000000000000000BF00 /* ClaudeStatus.swift in Sources */,
 				CB000000000000000BE00 /* ClaudeBrandColor.swift in Sources */,
+				CB0000000000000000000AE0 /* SessionTitleFont.swift in Sources */,
 				CB00000000000000000000A1 /* ClaudeLiveApp.swift in Sources */,
 				CB00000000000000000000A2 /* ContentView.swift in Sources */,
 				CB00000000000000000000A3 /* AppModel.swift in Sources */,
@@ -599,6 +649,7 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 				CB00000000000000000000E0 /* ClaudeLiveActivityWidget.swift in Sources */,
 				CB00000000000000000000E1 /* FrameAnimation.swift in Sources */,
 				CB00000000000000000000E2 /* MarqueeText.swift in Sources */,
+				CB0000000000000000000AC0 /* ActivityMarqueeText.swift in Sources */,
 				CB00000000000000000000EE /* LiveActivityMirrorView.swift in Sources */,
 				CB000000000000000006A5 /* WatchLink.swift in Sources */,
 				CB00000000000000000BA0 /* NotificationManager.swift in Sources */,
@@ -611,8 +662,11 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CB0000000000000000000AB2 /* ClaudeLiveSessionsWidget.swift in Sources */,
+				CB0000000000000000000AB1 /* SessionWidgetStore.swift in Sources */,
 				CB000000000000000BF10 /* ClaudeStatus.swift in Sources */,
 				CB000000000000000BE10 /* ClaudeBrandColor.swift in Sources */,
+				CB0000000000000000000AE1 /* SessionTitleFont.swift in Sources */,
 				CB00000000000000000000A5 /* ClaudeActivityAttributes.swift in Sources */,
 				CB000000000000000BD10 /* MarkdownTable.swift in Sources */,
 				CB00000000000000000000AD /* AnswerIntent.swift in Sources */,
@@ -622,6 +676,7 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 				CB00000000000000000000A7 /* ClaudeLiveActivityWidget.swift in Sources */,
 				CB00000000000000000000B1 /* FrameAnimation.swift in Sources */,
 				CB00000000000000000000B3 /* MarqueeText.swift in Sources */,
+				CB0000000000000000000AC1 /* ActivityMarqueeText.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -631,6 +686,7 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 			files = (
 				CB000000000000000BF20 /* ClaudeStatus.swift in Sources */,
 				CB000000000000000BE20 /* ClaudeBrandColor.swift in Sources */,
+				CB0000000000000000000AE2 /* SessionTitleFont.swift in Sources */,
 				CB000000000000000BD20 /* MarkdownTable.swift in Sources */,
 				CB000000000000000BD30 /* MarkdownText.swift in Sources */,
 				CB000000000000000006A1 /* ClaudeLiveWatchApp.swift in Sources */,
@@ -663,6 +719,7 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 				CB000000000000000007B3 /* MarkdownTable.swift in Sources */,
 				CB000000000000000007B4 /* ClaudeModel.swift in Sources */,
 				CB000000000000000007B5 /* ClaudeBrandColor.swift in Sources */,
+				CB0000000000000000000AE3 /* SessionTitleFont.swift in Sources */,
 				CB000000000000000007B6 /* ClaudeStatus.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -751,6 +808,7 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 		CF00000000000000000000A2 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				EXCLUDED_SOURCE_FILE_NAMES = "$(inherited) MacintoshSkeletalFilled.otf MacintoshSkeletalFilled-LICENSE.txt";
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
@@ -808,6 +866,7 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 		};
 		CF00000000000000000000A3 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = CA0000000000000000000AB0 /* PrivateMarqueeDebug.xcconfig */;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = App/ClaudeLive.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
@@ -842,7 +901,9 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 		};
 		CF00000000000000000000A5 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = CA0000000000000000000AB0 /* PrivateMarqueeDebug.xcconfig */;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widget/ClaudeLiveWidget.entitlements;
 				INFOPLIST_FILE = Widget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -860,6 +921,7 @@ CA00000000000000000BF0 /* ClaudeStatus.swift */ = {isa = PBXFileReference; lastK
 		CF00000000000000000000A6 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = Widget/ClaudeLiveWidget.entitlements;
 				INFOPLIST_FILE = Widget/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

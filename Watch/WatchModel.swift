@@ -36,6 +36,7 @@ final class WatchModel: NSObject, ObservableObject {
         var taskDone: Int = 0
         var taskTotal: Int = 0
         var taskActive: String = ""
+        var provider: String = "claude"
     }
 
     struct Message: Identifiable {
@@ -135,7 +136,8 @@ final class WatchModel: NSObject, ObservableObject {
                 },
                 taskDone: entry["taskDone"] as? Int ?? 0,
                 taskTotal: entry["taskTotal"] as? Int ?? 0,
-                taskActive: entry["taskActive"] as? String ?? "")
+                taskActive: entry["taskActive"] as? String ?? "",
+                provider: entry["provider"] as? String ?? "claude")
         }
     }
 

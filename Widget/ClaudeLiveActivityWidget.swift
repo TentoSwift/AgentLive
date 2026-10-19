@@ -1,6 +1,7 @@
 import ActivityKit
 import SwiftUI
 import UIKit
+import CoreText
 import WidgetKit
 
 /// ツール名に対応する SF Symbol 名。
@@ -20,9 +21,9 @@ func toolSymbolName(_ tool: String) -> String {
 /// 実行中ツールのアイコン。Task/Agent（サブエージェント）はカスタムシンボル
 /// （Assets.xcassets の ClaudeTaskRunning）、それ以外は toolSymbolName の SF Symbol
 @ViewBuilder
-func toolRunningIcon(_ tool: String) -> some View {
+func toolRunningIcon(_ tool: String, provider: SessionProvider = .claude) -> some View {
     if tool == "Task" || tool == "Agent" {
-        Image("ClaudeTaskRunning")
+        Image("\(provider.symbolPrefix)TaskRunning")
             .renderingMode(.template)
             .resizable()
             .scaledToFit()
@@ -38,7 +39,7 @@ func toolRunningIcon(_ tool: String) -> some View {
 /// 追加すれば自動的に使われる（例: ClaudeBashCheckmark）。
 /// まだ用意していないツールは nil を返し、呼び出し側は共通の
 /// ClaudeBadgeCheckmark にフォールバックする
-func toolCheckmarkSymbolName(_ tool: String) -> String? {
+func toolCheckmarkSymbolName(_ tool: String, provider: SessionProvider = .claude) -> String? {
     // toolSymbolName と同じグループ分けで、似たツールは1つのシンボルを共有する
     let group: String
     switch tool {
@@ -50,7 +51,7 @@ func toolCheckmarkSymbolName(_ tool: String) -> String? {
     case "WebFetch", "WebSearch":         group = "WebFetch"
     default:                              return nil
     }
-    let name = "Claude\(group)Checkmark"
+    let name = "\(provider.symbolPrefix)\(group)Checkmark"
     return UIImage(named: name) != nil ? name : nil
 }
 
@@ -78,12 +79,21 @@ struct ClaudeLiveActivityWidget: Widget {
                 .widgetURL(URL(string: "claudelive://session/\(context.attributes.sessionId)"))
         } dynamicIsland: { context in
             let status = ClaudeStatus(context.state.status)
+            let provider = context.state.sessionProvider
             // 完了時、返答が長くて場所を取るなら他の情報（プロジェクト名・状態ラベル等）は省く
             let expandResponse = status == .done && context.state.lastResponse.count >= 100
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    StatusIconView(status: status, size: 24)
-                        .padding(.leading, 4)
+                    HStack(spacing: 6) {
+                        StatusIconView(status: status, provider: provider, size: 24)
+                        if status != .question && status != .done {
+                            Text(status.label)
+                                .font(.caption2)
+                                .foregroundStyle(status.color(for: provider))
+                                .lineLimit(1)
+                        }
+                    }
+                    .padding(.leading, 4)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     // 質問中は経過時間よりも質問カードの横幅を優先する。
@@ -97,36 +107,13 @@ struct ClaudeLiveActivityWidget: Widget {
                             .padding(.trailing, 4)
                     }
                 }
-                DynamicIslandExpandedRegion(.center) {
-                    if status == .question || status == .done {
-                        // 質問中、または完了時はプロジェクト名・セッション名・状態ラベルも省き、
-                        // 内容の表示に最大限スペースを譲る
-                        EmptyView()
-                    } else {
-                        // DI では何のセッションかを示す行（プロジェクト名 "Claud" や
-                        // "claud-9b" のような自動生成のセッション名）を出さない。
-                        // 狭い幅を食うわりに読み取れる情報が少ないため、
-                        // 状態と実行中ツールだけにする（識別はロック画面側にある）
-                        HStack(spacing: 4) {
-                            Text(status.label)
-                                .font(.caption2)
-                                .foregroundStyle(status.color)
-                            if !context.state.currentTool.isEmpty {
-                                Text(context.state.currentTool)
-                                    .font(.caption2.monospaced())
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-                        }
-                    }
-                }
                 DynamicIslandExpandedRegion(.bottom) {
-                    VStack(alignment: .leading, spacing: 3) {
+                    ReplyPriorityLayout(maxHeight: 120, spacing: 3) {
                         if !context.state.question.isEmpty {
                             QuestionView(sessionId: context.attributes.sessionId,
                                          question: context.state.question,
                                          options: context.state.options,
-                                         tint: status.color,
+                                         tint: status.color(for: provider),
                                          compact: true,
                                          isSettled: context.state.textSettled,
                               questionCount: context.state.questionCount)
@@ -138,53 +125,46 @@ struct ClaudeLiveActivityWidget: Widget {
                                                   total: context.state.taskTotal ?? 0,
                                                   active: context.state.taskActive ?? "")
                             }
-                            // 完了時、返答が長くて場所を取るならツールログ・実行回数は省いて
+                            // 完了時、返答が長くて場所を取るならツールログは省いて
                             // 返答を複数行で優先表示する（マーキーは1行しか流せないため）
                             if expandResponse {
                                 if !context.state.lastPrompt.isEmpty {
                                     HStack(alignment: .center, spacing: 6) {
                                         PromptIcon(size: 24, color: .secondary)
-                                        MarqueeText(
-                                            text: context.state.lastPrompt,
-                                            font: .footnote, uiFontSize: 13, uiFontWeight: .regular,
-                                            color: .secondary, lineHeight: 14,
-                                            isSettled: context.state.textSettled)
+                                        ActivityMarqueeText(context.state.lastPrompt)
+                                            .foregroundStyle(.secondary)
                                     }
                                 }
                                 HStack(alignment: .top, spacing: 6) {
-                                    ReplyIcon(size: 24, color: Color.claudeBrand, status: status, changeTrigger: context.state.lastResponse)
-                                    ResponseBodyView(text: context.state.lastResponse, lineLimit: 10)
+                                    ReplyIcon(size: 24, color: provider.accentColor, status: status, changeTrigger: context.state.lastResponse, provider: provider)
+                                    CompletedResponseView(text: context.state.lastResponse)
                                         .foregroundStyle(.primary)
                                 }
+                                .layoutValue(key: ResponseContentKey.self, value: true)
                             } else {
                                 // プロンプトと返答、両方あれば両方表示する（完了時も入力を残す）
                                 if !context.state.lastPrompt.isEmpty {
                                     HStack(alignment: .center, spacing: 6) {
                                         PromptIcon(size: 24, color: .secondary)
-                                        MarqueeText(
-                                            text: context.state.lastPrompt,
-                                            font: .footnote, uiFontSize: 13, uiFontWeight: .regular,
-                                            color: .secondary, lineHeight: 14,
-                                            isSettled: context.state.textSettled)
+                                        ActivityMarqueeText(context.state.lastPrompt)
+                                            .foregroundStyle(.secondary)
                                     }
                                 }
                                 if !context.state.lastResponse.isEmpty {
                                     if status == .done && context.state.lastResponse.count >= 16 {
-                                        // 完了時、16文字以上の返答はマーキーにせず2行まで折り返す
+                                        // 完了時は読める先頭を残し、はみ出した続きだけ2周流す
                                         HStack(alignment: .top, spacing: 6) {
-                                            ReplyIcon(size: 24, color: Color.claudeBrand, status: status, changeTrigger: context.state.lastResponse)
-                                            ResponseBodyView(text: context.state.lastResponse, lineLimit: 2)
+                                            ReplyIcon(size: 24, color: provider.accentColor, status: status, changeTrigger: context.state.lastResponse, provider: provider)
+                                            CompletedResponseView(text: context.state.lastResponse)
                                                 .foregroundStyle(.primary)
                                         }
+                                        .layoutValue(key: ResponseContentKey.self, value: true)
                                     } else {
                                         // マーキーは 1 行なのでアイコンは中央揃え（.top だと浮く）
                                         HStack(alignment: .center, spacing: 6) {
-                                            ReplyIcon(size: 24, color: Color.claudeBrand, status: status, changeTrigger: context.state.lastResponse)
-                                            MarqueeText(
-                                                text: context.state.lastResponse,
-                                                font: .footnote, uiFontSize: 13, uiFontWeight: .regular,
-                                                color: .primary, lineHeight: 14,
-                                                isSettled: context.state.textSettled)
+                                            ReplyIcon(size: 24, color: provider.accentColor, status: status, changeTrigger: context.state.lastResponse, provider: provider)
+                                            ActivityMarqueeText(context.state.lastResponse)
+                                                .foregroundStyle(.primary)
                                         }
                                     }
                                 }
@@ -204,7 +184,7 @@ struct ClaudeLiveActivityWidget: Widget {
                     .ignoresSafeArea(.container, edges: .bottom)
                 }
             } compactLeading: {
-                CompactStatusIcon(status: status, size: 20,
+                CompactStatusIcon(status: status, provider: provider, size: 20,
                                   startedAt: context.state.startedAt,
                                   animated: context.state.compactAnimated,
                                   changeTrigger: context.state.toolCount)
@@ -219,11 +199,11 @@ struct ClaudeLiveActivityWidget: Widget {
                             Image(systemName: "questionmark")
                                 .resizable()
                                 .scaledToFit()
-                                .foregroundStyle(status.color)
+                                .foregroundStyle(status.color(for: provider))
                         } else if !context.state.currentTool.isEmpty {
-                            toolRunningIcon(context.state.currentTool)
-                                .foregroundStyle(status.color)
-                        } else if let name = toolCheckmarkSymbolName(context.state.lastTool) {
+                            toolRunningIcon(context.state.currentTool, provider: provider)
+                                .foregroundStyle(status.color(for: provider))
+                        } else if let name = toolCheckmarkSymbolName(context.state.lastTool, provider: provider) {
                             // ツール実行が終わったら（完了時に限らず作業中の合間も）
                             // 直近ツールのチェックマーク付きアイコンを出す。
                             // バッジ付きは横長なので正方形に fit させると本体が
@@ -232,7 +212,7 @@ struct ClaudeLiveActivityWidget: Widget {
                                 .renderingMode(.template)
                                 .resizable()
                                 .scaledToFit()
-                                .foregroundStyle(Color.claudeBrand)
+                                .foregroundStyle(provider.accentColor)
                                 // ターミナル（Bash）だけ大きめに見せる
                                 .frame(height: context.state.lastTool == "Bash" ? 20 * 1.4 * 1.5 * 1.5 : 20)
                         } else {
@@ -246,14 +226,14 @@ struct ClaudeLiveActivityWidget: Widget {
                 // ツール実行中はそのツールのアイコン、それ以外は状態アイコン
                 // （完了なら Claude の完了マーク）
                 if !context.state.currentTool.isEmpty {
-                    toolRunningIcon(context.state.currentTool)
+                    toolRunningIcon(context.state.currentTool, provider: provider)
                         .frame(width: 18, height: 18)
-                        .foregroundStyle(status.color)
+                        .foregroundStyle(status.color(for: provider))
                 } else {
-                    StatusIconView(status: status, size: 18, animateWhenWorking: false)
+                    StatusIconView(status: status, provider: provider, size: 18, animateWhenWorking: false)
                 }
             }
-            .keylineTint(status.color)
+            .keylineTint(status.color(for: provider))
         }
         // watchOS 11+ の Smart Stack にも表示する（WWDC24 "Bring your Live
         // Activity to Apple Watch"）。対応ファミリーは .small のみ。
@@ -326,9 +306,10 @@ struct ReplyIcon: View {
     var status: ClaudeStatus? = nil
     /// この値が変わるたびに一度だけ揺れる（新しい返答が来たときのフィードバック用）
     var changeTrigger: String = ""
+    var provider: SessionProvider = .claude
 
     private var symbolName: String {
-        status == .done ? "ClaudeBubbleReplyDone" : "ClaudeBubbleReply"
+        status == .done ? "\(provider.symbolPrefix)BubbleReplyDone" : "\(provider.symbolPrefix)BubbleReply"
     }
 
     var body: some View {
@@ -355,6 +336,7 @@ struct ReplyIcon: View {
 /// カスタムシンボル + symbolEffect というネイティブの手段でアニメーションさせる
 struct CompactStatusIcon: View {
     let status: ClaudeStatus
+    var provider: SessionProvider = .claude
     let size: CGFloat
     /// DigitFrameSpinnerView のタイマー起点（ライブアクティビティの startedAt）
     let startedAt: Date
@@ -369,28 +351,35 @@ struct CompactStatusIcon: View {
 
     private var symbolName: String {
         switch status {
-        case .done:     return "ClaudeBadgeCheckmark"
-        case .question: return "ClaudeBadgeQuestionmark"
+        case .done:     return "\(provider.symbolPrefix)BadgeCheckmark"
+        case .question: return "\(provider.symbolPrefix)BadgeQuestionmark"
         default:        return ""
         }
     }
 
     var body: some View {
         Group {
-            if status == .working && animated {
+            if provider == .codex && status == .working {
+                Image("CodexMark")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .foregroundStyle(provider.accentColor)
+                    .symbolEffect(.bounce, value: changeTrigger)
+            } else if status == .working && animated {
                 CompactSpinnerView(size: size)
             } else if status == .working {
                 Image("ClaudeMark")
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
-                    .foregroundStyle(status.color)
+                    .foregroundStyle(status.color(for: provider))
                     .symbolEffect(.bounce, value: changeTrigger)
             } else if symbolName.isEmpty {
                 Image(systemName: status.icon)
                     .resizable()
                     .scaledToFit()
-                    .foregroundStyle(status.color)
+                    .foregroundStyle(status.color(for: provider))
                     .symbolEffect(.pulse, options: .repeating, isActive: status.needsAttention)
             } else {
                 Image(symbolName)
@@ -398,7 +387,7 @@ struct CompactStatusIcon: View {
                     .resizable()
                     .scaledToFit()
                     // 完了はブランドカラー固定、質問は状態色（インディゴ）にする
-                    .foregroundStyle(status == .question ? status.color : Color.claudeBrand)
+                    .foregroundStyle(status == .question ? status.color(for: provider) : provider.accentColor)
                     .symbolEffect(.pulse, options: .repeating,
                                   isActive: status == .question)
             }
@@ -409,38 +398,46 @@ struct CompactStatusIcon: View {
 
 struct StatusIconView: View {
     let status: ClaudeStatus
+    var provider: SessionProvider = .claude
     let size: CGFloat
     var animateWhenWorking: Bool = true
 
     /// Claude マークにバッジを付けたカスタムシンボル（Assets.xcassets）
     private var customSymbolName: String? {
         switch status {
-        case .done:     return "ClaudeBadgeCheckmark"
-        case .question: return "ClaudeBadgeQuestionmark"
+        case .done:     return "\(provider.symbolPrefix)BadgeCheckmark"
+        case .question: return "\(provider.symbolPrefix)BadgeQuestionmark"
         default:        return nil
         }
     }
 
     var body: some View {
         Group {
-            if status == .working && animateWhenWorking {
-                SpinnerProofView(size: size, color: status.color)
+            if provider == .codex && status == .working {
+                Image("CodexMark")
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .foregroundStyle(provider.accentColor)
+                    .symbolEffect(.pulse, options: .repeating, isActive: animateWhenWorking)
+            } else if status == .working && animateWhenWorking {
+                SpinnerProofView(size: size, color: status.color(for: provider))
             } else if status == .working {
                 // アニメーションを使わない場所（DI minimal・watch AOD 中）は
                 // 金槌マークではなく Claude マークの静止版で表す
-                ClaudeMarkIcon(size: size, color: status.color)
+                ClaudeMarkIcon(size: size, color: status.color(for: provider))
             } else if let name = customSymbolName {
                 Image(name)
                     .renderingMode(.template)
                     .resizable()
                     .scaledToFit()
                     // 完了はブランドカラー固定、質問は状態色（インディゴ）にする
-                    .foregroundStyle(status == .question ? status.color : Color.claudeBrand)
+                    .foregroundStyle(status == .question ? status.color(for: provider) : provider.accentColor)
             } else {
                 Image(systemName: status.icon)
                     .resizable()
                     .scaledToFit()
-                    .foregroundStyle(status.color)
+                    .foregroundStyle(status.color(for: provider))
                     .symbolEffect(.pulse, isActive: status.needsAttention)
                     .symbolEffect(.bounce.byLayer, options: .repeating, isActive: status == .compacting)
             }
@@ -451,41 +448,48 @@ struct StatusIconView: View {
 
 private struct LockScreenView: View {
     let context: ActivityViewContext<ClaudeActivityAttributes>
+    private var provider: SessionProvider { context.state.sessionProvider }
 
     // watchOS の Smart Stack から描画されるときだけ .small になる。
     // iOS のロック画面 / バナーでは常に nil（＝ .small 以外の扱い）
     @Environment(\.activityFamily) private var activityFamily
+    @Environment(\.isActivityFullscreen) private var isActivityFullscreen
 
     private var status: ClaudeStatus { ClaudeStatus(context.state.status) }
 
     var body: some View {
         if activityFamily == .small {
             WatchSmallView(context: context, status: status)
+        } else if isActivityFullscreen {
+            StandByView(context: context, status: status)
+                .activityBackgroundTint(.black)
         } else {
             fullBody
-                .activityBackgroundTint(Color.black.opacity(0.65))
+                // システムのガラス素材を青紫に染める。背景を独自の不透明な
+                // View で覆わず、壁紙・アクセシビリティ設定への適応を保つ。
+                .activityBackgroundTint(Color.codexBrand.opacity(0.28))
         }
     }
 
     private var fullBody: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        ReplyPriorityLayout(maxHeight: 136, spacing: status == .done ? 4 : 6) {
             if !context.state.question.isEmpty {
                 // 質問中は質問文と選択肢ボタンだけを表示する
                 // （ヘッダー・経過時間・状態行・会話・ツール数はすべて省く）
                 QuestionView(sessionId: context.attributes.sessionId,
                              question: context.state.question,
                              options: context.state.options,
-                             tint: status.color,
+                             tint: status.color(for: provider),
                              compact: false,
                              isSettled: context.state.textSettled,
                               questionCount: context.state.questionCount)
             } else {
                 // ヘッダ: 状態アイコン（作業中はアニメーション）・状態ラベル・経過時間
                 HStack(spacing: 6) {
-                    StatusIconView(status: status, size: 26)
+                    StatusIconView(status: status, provider: provider, size: 26)
                     Text(status.label)
                         .font(.headline)
-                        .foregroundStyle(status.needsAttention ? status.color : .primary)
+                        .foregroundStyle(status.needsAttention ? status.color(for: provider) : .primary)
                     if !context.state.currentTool.isEmpty {
                         Text(context.state.currentTool)
                             .font(.subheadline.monospaced())
@@ -499,7 +503,8 @@ private struct LockScreenView: View {
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
-                    ElapsedTimerText(startedAt: context.state.startedAt)
+                    ElapsedTimerText(startedAt: context.state.workStartedAt ?? context.state.startedAt,
+                                     endedAt: context.state.workEndedAt)
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
@@ -536,67 +541,58 @@ private struct LockScreenView: View {
                     }
                 }
 
-                // 完了時、返答が長くて場所を取るならツールログ・実行回数は省いて
+                // 完了時、返答が長くて場所を取るならツールログは省いて
                 // 返答を複数行で優先表示する（マーキーは1行しか流せないため）
                 let expandResponse = status == .done && context.state.lastResponse.count >= 100
                 if expandResponse {
                     if !context.state.lastPrompt.isEmpty {
                         HStack(alignment: .center, spacing: 6) {
-                            PromptIcon(size: 26, color: .secondary)
-                            MarqueeText(
-                                text: context.state.lastPrompt,
-                                font: .footnote, uiFontSize: 13, uiFontWeight: .regular,
-                                color: .secondary, lineHeight: 16,
-                                isSettled: context.state.textSettled)
+                            PromptIcon(size: status == .done ? 18 : 26, color: .secondary)
+                            ActivityMarqueeText(context.state.lastPrompt)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     HStack(alignment: .top, spacing: 6) {
-                        ReplyIcon(size: 26, color: Color.claudeBrand, status: status, changeTrigger: context.state.lastResponse)
-                        ResponseBodyView(text: context.state.lastResponse, lineLimit: 10)
+                        ReplyIcon(size: 26, color: provider.accentColor, status: status, changeTrigger: context.state.lastResponse, provider: provider)
+                        CompletedResponseView(text: context.state.lastResponse)
                             .foregroundStyle(.primary)
                     }
+                    .layoutValue(key: ResponseContentKey.self, value: true)
                 } else {
                     // 直近のやり取り: ユーザー入力 → Claude の返答
                     if !context.state.lastPrompt.isEmpty {
                         // マーキーは 1 行なのでアイコンは中央揃え（.top だと浮く）
                         HStack(alignment: .center, spacing: 6) {
-                            PromptIcon(size: 26, color: .secondary)
-                            MarqueeText(
-                                text: context.state.lastPrompt,
-                                font: .footnote, uiFontSize: 13, uiFontWeight: .regular,
-                                color: .secondary, lineHeight: 16,
-                                isSettled: context.state.textSettled)
+                            PromptIcon(size: status == .done ? 18 : 26, color: .secondary)
+                            ActivityMarqueeText(context.state.lastPrompt)
+                                .foregroundStyle(.secondary)
                         }
                     }
                     if !context.state.lastResponse.isEmpty {
                         if status == .done && context.state.lastResponse.count >= 16 {
-                            // 完了時、16文字以上の返答はマーキーにせず2行まで折り返す
+                            // 完了時は読める先頭を残し、はみ出した続きだけ2周流す
                             HStack(alignment: .top, spacing: 6) {
-                                ReplyIcon(size: 26, color: Color.claudeBrand, status: status, changeTrigger: context.state.lastResponse)
-                                ResponseBodyView(text: context.state.lastResponse, lineLimit: 2)
+                                ReplyIcon(size: 26, color: provider.accentColor, status: status, changeTrigger: context.state.lastResponse, provider: provider)
+                                CompletedResponseView(text: context.state.lastResponse)
                                     .foregroundStyle(.primary)
                             }
+                            .layoutValue(key: ResponseContentKey.self, value: true)
                         } else {
                             HStack(alignment: .center, spacing: 6) {
-                                ReplyIcon(size: 26, color: Color.claudeBrand, status: status, changeTrigger: context.state.lastResponse)
-                                MarqueeText(
-                                    text: context.state.lastResponse,
-                                    font: .footnote, uiFontSize: 13, uiFontWeight: .regular,
-                                    color: .primary, lineHeight: 16,
-                                    isSettled: context.state.textSettled)
+                                ReplyIcon(size: 26, color: provider.accentColor, status: status, changeTrigger: context.state.lastResponse, provider: provider)
+                                ActivityMarqueeText(context.state.lastResponse)
+                                    .foregroundStyle(.primary)
                             }
                         }
                     }
 
                     LogLinesView(logs: context.state.recentLogs, maxLines: 2)
 
-                    // フッタ: ツール実行数
-                    if context.state.toolCount > 0 {
-                        Text("ツール実行 \(context.state.toolCount) 回")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                    }
                 }
+            }
+            if context.state.question.isEmpty {
+                SessionUsageView(tokenCount: context.state.tokenCount,
+                                 weeklyUsedPercent: context.state.weeklyUsedPercent)
             }
         }
         .padding(12)
@@ -612,18 +608,224 @@ private struct LockScreenView: View {
     }
 }
 
+/// StandBy can receive a shorter canvas than the landscape screen itself.
+/// Reserve a bottom inset even when the host doesn't report the home indicator.
+struct StandBySizing {
+    let insets: EdgeInsets
+    let contentSize: CGSize
+    let compact: Bool
+    let statusSize: CGFloat
+    let nameSize: CGFloat
+    let bodySize: CGFloat
+    let footerSize: CGFloat
+    let spacing: CGFloat
+
+    init(size: CGSize, safeArea: EdgeInsets = EdgeInsets()) {
+        let width = size.width.isFinite ? max(1, size.width) : 600
+        let height = size.height.isFinite ? max(1, size.height) : 280
+        compact = height < 280
+        let tight = height < 220
+        let horizontal: CGFloat = compact ? 16 : 24
+        let top: CGFloat = tight ? 8 : 16
+        let bottom: CGFloat = tight ? 12 : 20
+        insets = EdgeInsets(top: max(top, safeArea.top),
+                            leading: max(horizontal, safeArea.leading),
+                            bottom: max(bottom, safeArea.bottom + 8),
+                            trailing: max(horizontal, safeArea.trailing))
+        contentSize = CGSize(width: max(1, width - insets.leading - insets.trailing),
+                             height: max(1, height - insets.top - insets.bottom))
+        statusSize = tight ? 26 : compact ? 32 : 40
+        nameSize = tight ? 18 : compact ? 22 : 28
+        bodySize = tight ? 14 : compact ? 16 : 18
+        footerSize = tight ? 12 : compact ? 14 : 16
+        spacing = tight ? 6 : compact ? 8 : 12
+    }
+}
+
+/// 状態とセッション名は同じ行に置き、本文だけを空き高さに合わせる。
+private struct StandByView: View {
+    let context: ActivityViewContext<ClaudeActivityAttributes>
+    private var provider: SessionProvider { context.state.sessionProvider }
+    let status: ClaudeStatus
+    @Environment(\.isLuminanceReduced) private var isLuminanceReduced
+
+    private var sessionTitle: String {
+        if !context.state.sessionName.isEmpty { return context.state.sessionName }
+        if !context.state.sessionTitle.isEmpty { return context.state.sessionTitle }
+        return context.attributes.projectName
+    }
+
+    private var hasQuestion: Bool { !context.state.question.isEmpty }
+
+    var body: some View {
+        // ActivityKit first asks for the view's ideal height. A root
+        // GeometryReader answers 10 pt, collapsing the StandBy canvas before
+        // its children are measured. Offer intrinsically sized layouts instead.
+        ViewThatFits(in: .vertical) {
+            canvas(height: 280)
+            canvas(height: 240)
+            canvas(height: 200)
+            canvas(height: 160)
+        }
+    }
+
+    private func canvas(height: CGFloat) -> some View {
+        let sizing = StandBySizing(size: CGSize(width: 600, height: height))
+        return content(sizing)
+            .padding(sizing.insets)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    private func content(_ sizing: StandBySizing) -> some View {
+        ReplyPriorityLayout(maxHeight: sizing.contentSize.height, spacing: sizing.spacing) {
+            HStack(spacing: sizing.spacing) {
+                let iconSize = hasQuestion ? min(26, sizing.statusSize) : sizing.statusSize
+                StatusIconView(status: status, provider: provider, size: iconSize,
+                               animateWhenWorking: !isLuminanceReduced)
+                Text(context.isStale ? "接続待ち" : status.label)
+                    .font(.system(size: iconSize, weight: .bold))
+                    .foregroundStyle(context.isStale ? .orange : status.color(for: provider))
+                    .lineLimit(1).fixedSize(horizontal: true, vertical: false)
+                MarqueeText(sessionTitle, font: SessionTitleFont.uiFont(ofSize: sizing.nameSize),
+                            isEnabled: !isLuminanceReduced)
+                    .foregroundStyle(.primary)
+                if hasQuestion, sizing.contentSize.height < 200 {
+                    Button(intent: OpenSessionIntent(sessionId: context.attributes.sessionId)) {
+                        Image(systemName: "square.and.pencil")
+                            .font(.system(size: sizing.nameSize))
+                            .frame(width: 32, height: 32)
+                    }
+                    .buttonStyle(.plain).foregroundStyle(provider.accentColor)
+                    .accessibilityLabel("他の答えを入力")
+                    .disabled(context.isStale)
+                }
+            }
+
+            if hasQuestion {
+                StandByQuestionView(context: context, tint: status.color(for: provider),
+                                    compact: sizing.compact,
+                                    showsCustomAnswer: sizing.contentSize.height >= 200)
+                    .disabled(context.isStale)
+            } else if !context.state.lastPrompt.isEmpty || !context.state.lastResponse.isEmpty {
+                ReplyPriorityLayout(spacing: sizing.compact ? 4 : 8) {
+                    if !context.state.lastPrompt.isEmpty {
+                        HStack(spacing: 8) {
+                            PromptIcon(size: sizing.bodySize, color: .secondary)
+                            MarqueeText(context.state.lastPrompt, font: .systemFont(ofSize: sizing.bodySize),
+                                        isEnabled: !isLuminanceReduced)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    if !context.state.lastResponse.isEmpty {
+                        HStack(alignment: .top, spacing: 8) {
+                            ReplyIcon(size: sizing.bodySize, color: provider.accentColor, status: status,
+                                      changeTrigger: context.state.lastResponse, provider: provider)
+                            CompletedResponseView(text: context.state.lastResponse,
+                                                  basePointSize: sizing.bodySize,
+                                                  isAnimationEnabled: !isLuminanceReduced)
+                                .foregroundStyle(.primary)
+                        }
+                        .layoutValue(key: ResponseContentKey.self, value: true)
+                    }
+                }
+                .layoutValue(key: ResponseContentKey.self, value: true)
+            } else if !context.state.detail.isEmpty {
+                Text(context.state.detail)
+                    .font(.system(size: sizing.bodySize))
+                    .foregroundStyle(.secondary).lineLimit(1)
+            }
+
+            if !hasQuestion {
+                HStack(spacing: 12) {
+                    Text(context.state.currentTool.isEmpty
+                         ? context.attributes.projectName : context.state.currentTool)
+                        .lineLimit(1).minimumScaleFactor(0.75)
+                    Spacer(minLength: 8)
+                    ElapsedTimerText(startedAt: context.state.workStartedAt ?? context.state.startedAt,
+                                     endedAt: context.state.workEndedAt)
+                        .monospacedDigit().fixedSize()
+                }
+                .font(.system(size: sizing.footerSize)).foregroundStyle(.secondary)
+                SessionUsageView(tokenCount: context.state.tokenCount,
+                                 weeklyUsedPercent: context.state.weeklyUsedPercent,
+                                 font: .system(size: sizing.footerSize))
+            }
+        }
+    }
+}
+
+private struct StandByQuestionView: View {
+    let context: ActivityViewContext<ClaudeActivityAttributes>
+    let tint: Color
+    var compact = false
+    var showsCustomAnswer = true
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: compact ? 6 : 10) {
+            MarqueeText(context.state.question,
+                        font: .systemFont(ofSize: compact ? 18 : 22, weight: .semibold))
+
+            if (context.state.questionCount ?? 1) > 1 {
+                Button(intent: OpenSessionIntent(sessionId: context.attributes.sessionId)) {
+                    Label("\(context.state.questionCount ?? 0)件の質問 · アプリで回答",
+                          systemImage: "list.bullet.rectangle")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(tint)
+            } else {
+                let options = Array(context.state.options.prefix(4))
+                ForEach(0..<((options.count + 1) / 2), id: \.self) { row in
+                    HStack(spacing: compact ? 6 : 10) {
+                        ForEach(0..<2, id: \.self) { column in
+                            let index = row * 2 + column
+                            if index < options.count {
+                                Button(intent: AnswerQuestionIntent(
+                                    sessionId: context.attributes.sessionId, answer: options[index])) {
+                                    Text(options[index])
+                                        .font(.system(size: compact ? 16 : 18, weight: .bold))
+                                        .lineLimit(2)
+                                        .minimumScaleFactor(0.75)
+                                        .multilineTextAlignment(.center)
+                                        .frame(maxWidth: .infinity, minHeight: compact ? 38 : 44)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, compact ? 3 : 6)
+                                        .foregroundStyle(.white)
+                                        .background(tint, in: RoundedRectangle(cornerRadius: 14))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+                if showsCustomAnswer {
+                    Button(intent: OpenSessionIntent(sessionId: context.attributes.sessionId)) {
+                        Label("他の答えを入力…", systemImage: "square.and.pencil")
+                            .font(.subheadline)
+                            .frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(tint)
+                }
+            }
+        }
+    }
+}
+
 /// watchOS の Smart Stack（.small ファミリーのみ対応）向けの表示。
 /// スペースが極小なのでテキスト中心・要素は最小限にする。
 /// 質問中もボタンは出さず文字で知らせるだけ（回答は iPhone 側で行う）
 private struct WatchSmallView: View {
     let context: ActivityViewContext<ClaudeActivityAttributes>
+    private var provider: SessionProvider { context.state.sessionProvider }
     let status: ClaudeStatus
 
     // 常時表示（Always On Display）中は輝度を落として表示される。
     // 色をそのまま使うと明るすぎるので、暗めの表現に切り替える
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
-    private var tint: Color { isLuminanceReduced ? .white.opacity(0.6) : status.color }
+    private var tint: Color { isLuminanceReduced ? .white.opacity(0.6) : status.color(for: provider) }
 
     /// インライン Markdown（**強調**・`コード` など）を解釈する
     private func styled(_ text: String) -> AttributedString {
@@ -643,18 +845,16 @@ private struct WatchSmallView: View {
     }
 
     private var content: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        ReplyPriorityLayout(maxHeight: 100, spacing: 3) {
             HStack(alignment: .top, spacing: 5) {
                 // 常時表示(AOD)中はアニメを止めて静止アイコンに（輝度を落とす必要があり、
                 // このアイコン画像は固定色のため tint を効かせられないため）
-                StatusIconView(status: status, size: 22, animateWhenWorking: !isLuminanceReduced)
-                Text(context.state.sessionName.isEmpty
-                     ? context.attributes.projectName
-                     : context.state.sessionName)
-                    .font(.caption2.bold())
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                    .layoutPriority(-1)
+                StatusIconView(status: status, provider: provider, size: 22, animateWhenWorking: !isLuminanceReduced)
+                ActivityMarqueeText(context.state.sessionName.isEmpty
+                                    ? context.attributes.projectName
+                                    : context.state.sessionName,
+                                    compact: true, weight: .bold, sessionTitle: true,
+                                    isEnabled: !isLuminanceReduced)
                 // 状態ラベル（「作業中」など）はセッション名の隣に置く
                 Text(status.label)
                     .font(.caption2)
@@ -667,16 +867,16 @@ private struct WatchSmallView: View {
                 // DI コンパクトの右端と同じ考え方で 1 行目の右端に置く
                 Group {
                     if !context.state.currentTool.isEmpty {
-                        toolRunningIcon(context.state.currentTool)
+                        toolRunningIcon(context.state.currentTool, provider: provider)
                             // 常時表示(AOD)中も色を変えない（他のアイコンは輝度を落とすが、
                             // これは要望によりそのままにする）
-                            .foregroundStyle(status.color)
-                    } else if let name = toolCheckmarkSymbolName(context.state.lastTool) {
+                            .foregroundStyle(status.color(for: provider))
+                    } else if let name = toolCheckmarkSymbolName(context.state.lastTool, provider: provider) {
                         Image(name)
                             .renderingMode(.template)
                             .resizable()
                             .scaledToFit()
-                            .foregroundStyle(status.color)
+                            .foregroundStyle(status.color(for: provider))
                             // ターミナル（Bash）だけ大きめに見せるが、行の高さ（22pt）を
                             // 超えると Smart Stack のカードからはみ出すので上限を設ける
                             .frame(height: context.state.lastTool == "Bash" ? 22 : 16)
@@ -691,15 +891,15 @@ private struct WatchSmallView: View {
 
             if !context.state.question.isEmpty {
                 let count = context.state.questionCount ?? 1
-                // Smart Stack は行数が限られるので質問文そのものは出さず、
-                // 「質問が来ている」ことだけをアイコンと短い見出しで示して、
-                // 空いた行を選択肢ボタンに回す（全文はアプリで読める）
+                // 質問の見出しとマーキーを出し、長い質問もカード内で読めるようにする。
                 HStack(spacing: 4) {
                     Image(systemName: "questionmark.circle.fill")
-                        .foregroundStyle(Color.claudeBrand)
+                        .foregroundStyle(provider.accentColor)
                     Text(count > 1 ? "質問 \(count)件" : "質問")
                         .font(.caption2.bold())
                 }
+                ActivityMarqueeText(context.state.question, compact: true,
+                                    isEnabled: !isLuminanceReduced)
                 // Smart Stack では単一質問でも選択肢を出さない。
                 // カードのタップで Watch アプリが開き、そこで回答する
                 // （選択肢の全文や自由入力はアプリでしか扱えないため、
@@ -719,17 +919,20 @@ private struct WatchSmallView: View {
                 // 状態の一言だけでなく、Claude が実際に何を言った/何を頼まれたかを
                 // 一番情報量の多い内容として表示する（返答 > 入力 > detail の優先順）
                 if !context.state.lastResponse.isEmpty {
-                    // Smart Stack は 3 行しかないので表は描かない。ただし表を含む
-                    // 返答は改行付きで届くため、素のまま出すとパイプ記法が
-                    // 表示行を埋めてしまう。「（表）」に畳んで文章にスペースを譲る
-                    Text(styled(MarkdownTable.flattenedWithoutTables(context.state.lastResponse)))
-                        .font(.caption2)
-                        .lineLimit(3)
+                    // 読める行はカードに残し、収まらない続きだけ2周流す。
+                    // AOD と Reduce Motion では静止し、表のセルもテキストで残す。
+                    if status == .done {
+                        CompletedResponseView(text: context.state.lastResponse, basePointSize: 11,
+                                              isAnimationEnabled: !isLuminanceReduced)
+                            .layoutValue(key: ResponseContentKey.self, value: true)
+                    } else {
+                        ActivityMarqueeText(CompletedResponseView.displayText(context.state.lastResponse),
+                                            compact: true, isEnabled: !isLuminanceReduced)
+                    }
                 } else if !context.state.lastPrompt.isEmpty {
-                    Text(styled(context.state.lastPrompt))
-                        .font(.caption2)
+                    ActivityMarqueeText(String(styled(context.state.lastPrompt).characters),
+                                        compact: true, isEnabled: !isLuminanceReduced)
                         .foregroundStyle(.secondary)
-                        .lineLimit(3)
                 } else if !context.state.detail.isEmpty {
                     Text(context.state.detail)
                         .font(.caption2)
@@ -764,18 +967,10 @@ struct QuestionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: compact ? 5 : 8) {
-            // 質問文はフォントマスク方式のコマ送りアニメで横スクロール表示する
-            // （公開 API のみで実現。Kyome22/AnimationLimitBreaker を移植）
-            MarqueeText(
-                text: question,
-                font: compact ? .caption2 : .footnote.weight(.semibold),
-                uiFontSize: compact ? 11 : 13,
-                uiFontWeight: compact ? .regular : .semibold,
-                color: .primary,
-                lineHeight: compact ? 14 : 18,
-                // 質問文は回答されるまで表示され続けるので、1周で静止させず
-                // ずっと流し続ける（isSettled を無視する）
-                isSettled: false)
+            // 回答待ちの間、一定速度で全文を繰り返し表示する。
+            ActivityMarqueeText(question, compact: compact,
+                                weight: compact ? .regular : .semibold)
+                .foregroundStyle(.primary)
 
             let items = isMultiQuestion ? [] : Array(options.prefix(4))
             if isMultiQuestion {
@@ -923,10 +1118,25 @@ struct LogLinesView: View {
 /// 経過時間タイマー（システム側で毎秒更新されるのでプッシュ不要）
 struct ElapsedTimerText: View {
     let startedAt: Date
+    var endedAt: Date? = nil
 
     var body: some View {
-        Text(timerInterval: startedAt...Date(timeIntervalSinceNow: 60 * 60 * 24),
-             countsDown: false)
-            .multilineTextAlignment(.trailing)
+        Group {
+            if let endedAt {
+                Text(workDurationText(from: startedAt, to: endedAt))
+            } else {
+                Text(startedAt, style: .timer)
+            }
+        }
+        .multilineTextAlignment(.trailing)
     }
+}
+
+/// 完了後の所要時間。24時間を超えた作業も日付で折り返さない。
+func workDurationText(from start: Date, to end: Date) -> String {
+    let seconds = max(0, Int(end.timeIntervalSince(start)))
+    if seconds >= 3600 {
+        return String(format: "%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60)
+    }
+    return String(format: "%d:%02d", seconds / 60, seconds % 60)
 }
