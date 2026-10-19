@@ -101,3 +101,11 @@ func sessionUsageText(tokenCount: Int?, weeklyUsedPercent: Double?) -> String? {
     }
     return parts.isEmpty ? nil : parts.joined(separator: " ・ ")
 }
+
+/// Codex's saved name stays stable while new prompts arrive.
+func sessionDisplayTitle(provider: String, name: String, title: String,
+                         lastPrompt: String, project: String) -> String {
+    let candidates = provider == "codex" ? [name, title, lastPrompt, project]
+                                         : [lastPrompt, title, name, project]
+    return candidates.first { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } ?? "セッション"
+}

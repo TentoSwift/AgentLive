@@ -10,18 +10,14 @@ struct ClaudeSessionEntity: AppEntity, Identifiable {
     var status: String
     var title: String
     var lastPrompt: String
+    var provider: String = "claude"
 
     static var typeDisplayRepresentation: TypeDisplayRepresentation = "Claude セッション"
     static var defaultQuery = ClaudeSessionQuery()
 
     var displayRepresentation: DisplayRepresentation {
-        // "claud-9b" のようなランダムな内部名だけでは一覧で見分けがつかないため、
-        // 会話の中身を表す文字列を見出しにする。直前のプロンプトの方が
-        // 「今何をしているセッションか」を表すので、最初の指示（title）より優先する
-        let label: String
-        if !lastPrompt.isEmpty { label = lastPrompt }
-        else if !title.isEmpty { label = title }
-        else { label = name.isEmpty ? project : name }
+        let label = sessionDisplayTitle(provider: provider, name: name, title: title,
+                                        lastPrompt: lastPrompt, project: project)
         let subtitle = name.isEmpty ? status : "\(project) ・ \(status)"
         return DisplayRepresentation(title: "\(label)", subtitle: "\(subtitle)")
     }
@@ -45,7 +41,8 @@ struct ClaudeSessionQuery: EntityQuery {
                 project: entry["project"] as? String ?? "",
                 status: entry["status"] as? String ?? "",
                 title: entry["title"] as? String ?? "",
-                lastPrompt: entry["lastPrompt"] as? String ?? "")
+                lastPrompt: entry["lastPrompt"] as? String ?? "",
+                provider: entry["provider"] as? String ?? "claude")
         }
     }
 }

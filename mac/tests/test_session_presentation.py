@@ -47,6 +47,15 @@ let oldWidget = Data(#"{"id":"old","title":"legacy","project":"test","status":"w
 assert(try! JSONDecoder().decode(WidgetSession.self, from: oldWidget).provider == nil)
 let sessions = WidgetSession.parse([["sessionId": "test", "provider": "codex", "status": "working"]])
 assert(sessions.count == 1 && sessions[0].provider == "codex")
+assert(sessionDisplayTitle(provider: "codex", name: "AgentLive", title: "古い題名",
+    lastPrompt: "直近の質問", project: "project") == "AgentLive")
+assert(sessionDisplayTitle(provider: "codex", name: "", title: "保存した題名",
+    lastPrompt: "直近の質問", project: "project") == "保存した題名")
+assert(sessionDisplayTitle(provider: "claude", name: "内部名", title: "最初の質問",
+    lastPrompt: "直近の質問", project: "project") == "直近の質問")
+let renamedWidget = WidgetSession.parse([["sessionId": "renamed", "provider": "codex",
+    "name": "AgentLive", "title": "古い題名", "lastPrompt": "直近の質問"]])
+assert(renamedWidget[0].title == "AgentLive")
 for (raw, visible) in [
     ("gpt-6.1-sol", "GPT-6.1 Sol"), ("gpt-6-astra", "GPT-6 Astra"),
     ("gpt-6-luna", "GPT-6 Luna"), ("gpt-5.6-terra", "GPT-5.6 Terra"),

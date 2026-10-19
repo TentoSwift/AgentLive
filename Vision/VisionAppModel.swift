@@ -27,6 +27,11 @@ final class VisionAppModel {
         var options: [String]
         var questions: [QuestionItem]
         var model: String
+        var provider: String = "claude"
+        var displayTitle: String {
+            sessionDisplayTitle(provider: provider, name: name, title: title,
+                                lastPrompt: lastPrompt, project: project)
+        }
     }
 
     struct QuestionItem {
@@ -116,7 +121,8 @@ final class VisionAppModel {
                         options: q["options"] as? [String] ?? [],
                         multiSelect: q["multiSelect"] as? Bool ?? false)
                 },
-                model: entry["model"] as? String ?? "")
+                model: entry["model"] as? String ?? "",
+                provider: entry["provider"] as? String ?? "claude")
         }
     }
 

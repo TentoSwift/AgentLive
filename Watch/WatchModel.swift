@@ -37,6 +37,10 @@ final class WatchModel: NSObject, ObservableObject {
         var taskTotal: Int = 0
         var taskActive: String = ""
         var provider: String = "claude"
+        var displayTitle: String {
+            sessionDisplayTitle(provider: provider, name: name, title: title,
+                                lastPrompt: lastPrompt, project: project)
+        }
     }
 
     struct Message: Identifiable {

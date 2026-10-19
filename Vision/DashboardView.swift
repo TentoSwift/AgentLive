@@ -68,11 +68,7 @@ struct DashboardView: View {
 private struct SessionRow: View {
     let session: VisionAppModel.Session
 
-    private var headline: String {
-        if !session.lastPrompt.isEmpty { return session.lastPrompt }
-        if !session.title.isEmpty { return session.title }
-        return session.name.isEmpty ? session.project : session.name
-    }
+    private var headline: String { session.displayTitle }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {

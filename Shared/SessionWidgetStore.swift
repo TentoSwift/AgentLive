@@ -15,7 +15,8 @@ struct WidgetSession: Codable, Equatable, Identifiable {
     static func parse(_ entries: [[String: Any]]) -> [WidgetSession] {
         entries.compactMap { entry in
             guard let id = entry["sessionId"] as? String else { return nil }
-            let title = ["title", "name", "project"].compactMap { entry[$0] as? String }
+            let titleKeys = entry["provider"] as? String == "codex" ? ["name", "title", "project"] : ["title", "name", "project"]
+            let title = titleKeys.compactMap { entry[$0] as? String }
                 .first(where: { !$0.isEmpty }) ?? "セッション"
             let question = entry["question"] as? String ?? ""
             let response = entry["lastResponse"] as? String ?? ""

@@ -54,6 +54,10 @@ final class AppModel: ObservableObject {
         var taskActive: String = ""
         var tokenCount: Int? = nil
         var weeklyUsedPercent: Double? = nil
+        var displayTitle: String {
+            sessionDisplayTitle(provider: provider, name: name, title: title,
+                                lastPrompt: lastPrompt, project: project)
+        }
     }
 
     /// サブエージェント（Agent ツールで起動されるバックグラウンドタスク）1件分。

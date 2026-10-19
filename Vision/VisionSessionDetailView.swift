@@ -49,11 +49,7 @@ struct VisionSessionDetailView: View {
             }
             .onDisappear { model.endPolling() }
         }
-        .sessionNavigationTitle(session.map { s in
-            s.lastPrompt.isEmpty
-                ? (s.title.isEmpty ? s.project : s.title)
-                : s.lastPrompt
-        } ?? "セッション")
+        .sessionNavigationTitle(session?.displayTitle ?? "セッション")
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {

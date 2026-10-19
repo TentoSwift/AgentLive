@@ -123,16 +123,7 @@ private struct NewSessionSheet: View {
 private struct SessionRow: View {
     let session: AppModel.RemoteSession
 
-    /// 一覧で見分けやすいように、ランダムな内部名（例 "claud-9b"）より会話の
-    /// 中身を表す文字列を見出しにする。会話が進むと最初の指示（title）より
-    /// 直前のプロンプト（lastPrompt）の方が「今何をしているセッションか」を
-    /// 表すので、そちらを優先する
-    private var headline: String {
-        if session.provider == "codex", !session.title.isEmpty { return session.title }
-        if !session.lastPrompt.isEmpty { return session.lastPrompt }
-        if !session.title.isEmpty { return session.title }
-        return session.name.isEmpty ? session.project : session.name
-    }
+    private var headline: String { session.displayTitle }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -251,10 +242,7 @@ struct SessionDetailView: View {
                 }
             }
         }
-        .sessionNavigationTitle(session.map { s in
-            if !s.lastPrompt.isEmpty { return s.lastPrompt }
-            return s.title.isEmpty ? (s.name.isEmpty ? s.project : s.name) : s.title
-        } ?? "セッション")
+        .sessionNavigationTitle(session?.displayTitle ?? "セッション")
         .navigationBarTitleDisplayMode(.inline)
         .tint(accent)
         .alert("回答を送信できませんでした", isPresented: $answerFailed) {

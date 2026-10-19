@@ -23,13 +23,7 @@ struct WatchContentView: View {
                 ForEach(model.sessions) { session in
                     NavigationLink(value: session.id) {
                         VStack(alignment: .leading, spacing: 2) {
-                            // ランダムな内部名（例 "claud-9b"）より、会話の中身を表す
-                            // 直前のプロンプト（無ければ最初の指示）を見出しにする
-                            SessionTitleText(session.lastPrompt.isEmpty
-                                 ? (session.title.isEmpty
-                                    ? (session.name.isEmpty ? session.project : session.name)
-                                    : session.title)
-                                 : session.lastPrompt)
+                            SessionTitleText(session.displayTitle)
                                 .lineLimit(1)
                             Text(statusLabel(session.status))
                                 .font(.caption2)
@@ -388,10 +382,7 @@ struct WatchSessionDetailView: View {
                 Color.clear.frame(height: 1).id("bottom")
             }
         }
-        .sessionNavigationTitle(session.map { s in
-            if !s.lastPrompt.isEmpty { return s.lastPrompt }
-            return s.title.isEmpty ? (s.name.isEmpty ? s.project : s.name) : s.title
-        } ?? "セッション")
+        .sessionNavigationTitle(session?.displayTitle ?? "セッション")
         .task {
             await model.refresh()
             messages = await model.fetchMessages(sessionId: sessionId)

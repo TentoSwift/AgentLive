@@ -27,8 +27,7 @@ struct TileView: View {
             // 右: セッション情報
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text(session?.project ?? "")
-                        .font(.headline)
+                    SessionTitleText(session?.displayTitle ?? "")
                         .lineLimit(1)
                     Spacer()
                     if let session {

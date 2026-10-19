@@ -1297,7 +1297,9 @@ enum CodexPendingQueue {
 
 /// Local Codex history metadata; opening it never resumes a task.
 enum CodexSavedHistory {
-    static func rows(sessionId: String? = nil, offset: Int = 0, databaseURL: URL? = nil) -> [[String: String]]? {
+    static func rows(sessionId: String? = nil, sessionIDs: [String]? = nil,
+                     offset: Int = 0, databaseURL: URL? = nil) -> [[String: String]]? {
+        if let sessionIDs, sessionIDs.isEmpty { return [] }
         let base = ProcessInfo.processInfo.environment["CODEX_HOME"].map { URL(fileURLWithPath: $0) }
             ?? FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".codex")
         var db: OpaquePointer?
@@ -1310,13 +1312,20 @@ enum CodexSavedHistory {
         let owned = (try? Data(contentsOf: registry)).flatMap { try? JSONDecoder().decode([String].self, from: $0) } ?? []
         let ids = owned.filter { UUID(uuidString: $0) != nil }.map { "'" + $0 + "'" }.joined(separator: ",")
         let filter = "(source IN ('cli','vscode','appServer')" + (ids.isEmpty ? "" : " OR (source = 'exec' AND id IN (\(ids)))") + ")"
-        let sql = "SELECT id,COALESCE(NULLIF(TRIM(name),''),title),cwd,rollout_path,archived FROM threads WHERE \(filter)"
-            + (sessionId == nil ? " ORDER BY updated_at DESC,id LIMIT 51 OFFSET ?" : " AND id = ?")
+        let selection: String
+        if sessionId != nil { selection = " AND id = ?" }
+        else if let sessionIDs { selection = " AND id IN (" + Array(repeating: "?", count: sessionIDs.count).joined(separator: ",") + ")" }
+        else { selection = " ORDER BY updated_at DESC,id LIMIT 51 OFFSET ?" }
+        let sql = "SELECT id,COALESCE(NULLIF(TRIM(name),''),title),cwd,rollout_path,archived FROM threads WHERE \(filter)" + selection
         var statement: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &statement, nil) == SQLITE_OK else { return nil }
         defer { sqlite3_finalize(statement) }
         if let sessionId {
             sqlite3_bind_text(statement, 1, sessionId, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        } else if let sessionIDs {
+            for (index, id) in sessionIDs.enumerated() {
+                sqlite3_bind_text(statement, Int32(index + 1), id, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+            }
         } else { sqlite3_bind_int64(statement, 1, Int64(max(0, offset))) }
         var rows: [[String: String]] = []
         while true {
@@ -4221,6 +4230,25 @@ final class Daemon {
                 continue
             }
             updateDiscoveredCodexSession(path: path)
+        }
+        refreshCodexSessionNames()
+    }
+
+    /// A rename changes Codex's metadata without appending to its rollout.
+    /// Read all tracked IDs, including older threads outside the history page.
+    private func refreshCodexSessionNames() {
+        let ids = sessions.values.filter { $0.provider == "codex" }.map(\.id)
+        guard let rows = CodexSavedHistory.rows(sessionIDs: ids) else { return }
+        for row in rows {
+            guard let id = row["sessionId"], let session = sessions[id],
+                  let raw = row["title"] else { continue }
+            let title = CodexDisplay.attachmentFreeText(raw)
+            guard !title.isEmpty, session.name != title || session.title != title else { continue }
+            session.name = title
+            session.title = title
+            // Re-render the name without changing the work clock, reply,
+            // status, or sending another completion alert.
+            sync(session, alert: nil)
         }
     }
 
